@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-10-12T17:11:14.043Z",
+  "source": "speckiwi",
+  "specFingerprint": {
+    "algorithm": "sha256",
+    "value": "ab7d1c564d5de5368fd1eca5e09660533919599c82d66dd47dcfaf89b0e441e7",
+    "files": [
+      {
+        "path": "docs/spec/00.index.md",
+        "sha256": "ee5a85899ffe95e338cfbab8c35488ae1140de715452068888724d385bb9f2a8",
+        "size": 2069,
+        "mtimeMs": 1791825065536.1492
+      },
+      {
+        "path": "docs/spec/01.webcron.srs.md",
+        "sha256": "c9027f78272d23179f771e450865e81c1848741484f2528f18af04f844576541",
+        "size": 42093,
+        "mtimeMs": 1791825065458.1587
+      },
+      {
+        "path": "docs/spec/90.appendix.md",
+        "sha256": "8efd8885080ab5565197f4ff17e4a526c8e6b5b47ee503cb8c38992a63f3180f",
+        "size": 968,
+        "mtimeMs": 1791823102339.1616
+      }
+    ]
+  },
+  "idCounters": {
+    "constraint": {
+      "WEBCRON": 1
+    },
+    "operational": {
+      "WEBCRON": 2
+    },
+    "security": {
+      "WEBCRON": 4
+    },
+    "functional": {
+      "WEBCRON": 9
+    },
+    "observability": {
+      "WEBCRON": 2
+    },
+    "data": {
+      "WEBCRON": 2
+    },
+    "reliability": {
+      "WEBCRON": 2
+    },
+    "interface": {
+      "WEBCRON": 1
+    }
+  },
+  "lock": {
+    "active": false,
+    "metadata": null
+  }
+}

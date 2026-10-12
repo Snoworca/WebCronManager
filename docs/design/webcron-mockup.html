@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebCron 화면 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#FAFBFC; --line:#E3E6EB; --line-soft:#EEF0F3;
+  --text:#16191F; --text-2:#454C5A; --muted:#5B6372;
+  --accent:#2B47C9; --accent-hover:#1E3399; --accent-soft:#E6EAFB;
+  --ok:#14633A; --ok-bg:#E3F3E8; --bad:#A8200F; --bad-bg:#FCE9E7;
+  --warn:#7F4500; --warn-bg:#FBEFD9; --idle:#454C5A; --idle-bg:#ECEEF2;
+  --code-bg:#14171D; --code-text:#E4E7EC;
+  --sans:'IBM Plex Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5}
+a{color:var(--accent)}a:hover{color:var(--accent-hover)}
+.mono{font-family:var(--mono)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+[hidden]{display:none!important}
+
+/* header */
+.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 32px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:56px;text-decoration:none;color:var(--text);font-size:18px;font-weight:700}
+.nav{display:flex;flex-wrap:wrap;gap:24px;flex:1 1 auto}
+.nav a{display:inline-flex;align-items:center;min-height:56px;padding:0 4px;font-size:15px;font-weight:600;text-decoration:none;color:var(--text-2);border-bottom:2px solid transparent}
+.nav a:hover{color:var(--text)}
+.nav a[aria-current=page]{color:var(--text);border-bottom-color:var(--accent)}
+.who{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 0}
+.chip{font-family:var(--mono);font-size:12px;color:var(--text-2);background:#F1F3F6;border-radius:6px;padding:4px 8px}
+
+/* layout */
+main.wrap{padding-top:32px;padding-bottom:64px;display:flex;flex-direction:column;gap:24px}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.head h1{margin:0;font-size:28px;letter-spacing:-.02em}
+.head p{margin:4px 0 0;color:var(--muted)}
+.crumb{font-size:13px;color:var(--muted);margin-bottom:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.card-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.card-h h2{margin:0;font-size:16px}
+.card-b{padding:20px}
+.split{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.split>.main-col{flex:999 1 600px;min-width:0}
+.split>.side-col{flex:1 1 340px;min-width:0}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.stat{padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.stat span{font-size:13px;font-weight:600;color:var(--muted)}
+.stat b{font-size:30px;line-height:1.1}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+.btn:hover{background:#F1F3F6;color:var(--text)}
+.btn-lg{min-height:44px;padding:0 18px}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover);color:#fff}
+.btn-danger{color:var(--bad);border-color:#F0C6C0}
+.btn-danger:hover{background:var(--bad-bg);color:var(--bad)}
+.icon-btn{width:36px;padding:0}
+.filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;padding:16px;border-bottom:1px solid var(--line)}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--text-2)}
+.hint{font-size:12px;font-weight:400;color:var(--muted)}
+.input{height:40px;border:1px solid #D5D9E0;border-radius:8px;padding:0 12px;font:inherit;color:var(--text);background:#fff;width:100%}
+textarea.input{height:auto;min-height:120px;padding:10px 12px;resize:vertical}
+.input:focus,.btn:focus-visible,.sw:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.input.mono{font-family:var(--mono);font-size:13px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 20px}
+.full{grid-column:1/-1}
+.seg{display:inline-flex;border:1px solid #D5D9E0;border-radius:10px;padding:3px;background:#F1F3F6;gap:3px}
+.seg button{min-height:38px;padding:0 16px;border:0;border-radius:7px;background:transparent;font:inherit;font-weight:600;color:var(--text-2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.seg button[aria-pressed=true]{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 36px;gap:8px;align-items:center}
+.kv-list{display:flex;flex-direction:column;gap:8px}
+.sw{position:relative;width:44px;height:26px;border-radius:999px;border:0;padding:0;cursor:pointer;flex:none;background:#BCC2CC}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.sw[aria-checked=true]{background:var(--accent)}
+.sw[aria-checked=true]::after{left:21px}
+.inline{display:flex;align-items:center;gap:10px}
+
+/* table */
+.tbl-box{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:13px;font-weight:600;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface-2)}
+td{padding:13px 16px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tr.off td{color:var(--muted)}
+tr.sel td{background:#F2F4FD}
+.t-main{font-weight:600;color:var(--text);text-decoration:none}
+.t-sub{display:block;font-size:13px;color:var(--muted)}
+.linkbtn{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--text);cursor:pointer;text-align:left}
+.linkbtn:hover{color:var(--accent);text-decoration:underline}
+.pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.b-success{background:var(--ok-bg);color:var(--ok)}
+.b-failure{background:var(--bad-bg);color:var(--bad)}
+.b-timeout{background:var(--warn-bg);color:var(--warn)}
+.b-running{background:var(--accent-soft);color:var(--accent)}
+.b-interrupted,.b-none{background:var(--idle-bg);color:var(--idle)}
+.type{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-2)}
+.ev{font-family:var(--mono);font-size:12px;background:#F1F3F6;border-radius:4px;padding:2px 6px;color:var(--text-2)}
+
+/* detail */
+.meta{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;margin:0}
+.meta dt{color:var(--muted);font-size:13px}
+.meta dd{margin:0;word-break:break-all}
+.out-h{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--text-2);margin:18px 0 6px}
+pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto}
+.diff{width:100%;border-collapse:collapse;font-size:13px}
+.diff th,.diff td{padding:8px 10px;border:1px solid var(--line-soft);text-align:left;vertical-align:top}
+.diff .old{background:#FDF3F2}.diff .new{background:#F0F8F2}
+.notice{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;background:var(--accent-soft);color:var(--accent-hover);border-radius:10px;padding:12px 16px}
+.alert{border-radius:8px;padding:10px 12px;font-size:13px}
+.alert-bad{background:var(--bad-bg);color:var(--bad)}
+.alert-warn{background:var(--warn-bg);color:var(--warn)}
+.next-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.next-list li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:13px}
+.next-list li:last-child{border-bottom:0}
+.next-list span{color:var(--muted);font-family:var(--sans)}
+.footer-bar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:16px 20px;border-top:1px solid var(--line)}
+
+/* login */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:400px;padding:36px 32px;display:flex;flex-direction:column;gap:20px}
+.login-card h1{margin:0;font-size:22px}
+
+/* demo switcher */
+.demo{position:fixed;right:16px;bottom:16px;z-index:9;background:var(--code-bg);color:#fff;border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);max-width:calc(100vw - 32px)}
+.demo a{color:#C9D2FF;text-decoration:none;padding:4px 8px;border-radius:6px}
+.demo a[aria-current=page]{background:#2B3242;color:#fff}
+@media (max-width:640px){.wrap{padding:0 16px}.head h1{font-size:24px}.kv{grid-template-columns:minmax(0,1fr) 36px}.kv .k{grid-column:1/-1}}
+</style>
+</head>
+<body>
+
+<!-- 시안 탐색용 (실제 화면에는 없음) -->
+<nav class="demo" aria-label="시안 화면 이동">
+  <strong style="padding:0 6px">시안</strong>
+  <a href="#login">로그인</a><a href="#jobs">작업</a><a href="#edit">작업 편집</a><a href="#runs">실행 이력</a><a href="#audit">감사 로그</a>
+</nav>
+
+<!-- ============ 로그인 ============ -->
+<section data-view="login" hidden>
+  <div class="login">
+    <form class="card login-card" id="loginForm" novalidate>
+      <div class="inline" style="gap:10px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2B47C9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span style="font-size:20px;font-weight:700">WebCron</span>
+      </div>
+      <div>
+        <h1>로그인</h1>
+        <p style="margin:4px 0 0;color:var(--muted)">관리자 계정으로 로그인하세요.</p>
+      </div>
+      <div class="alert alert-bad" id="loginErr" role="alert" hidden>아이디 또는 비밀번호가 올바르지 않습니다. (남은 시도 3회)</div>
+      <div class="alert alert-warn" id="loginLock" role="alert" hidden>로그인을 5회 연속 실패했습니다. 4분 52초 뒤에 다시 시도하세요.</div>
+      <label class="field">아이디<input class="input" name="id" autocomplete="username" value="admin"></label>
+      <label class="field">비밀번호<input class="input" name="pw" type="password" autocomplete="current-password" placeholder="비밀번호"></label>
+      <button class="btn btn-primary btn-lg" type="submit">로그인</button>
+      <p class="hint" style="margin:0">비밀번호를 비워 두고 누르면 오류 상태를, 세 번 누르면 차단 상태를 볼 수 있습니다.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ 공통 헤더 ============ -->
+<header class="top" id="appHeader" hidden>
+  <div class="wrap">
+    <a class="brand" href="#jobs">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2B47C9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      WebCron
+    </a>
+    <nav class="nav" aria-label="주 메뉴">
+      <a href="#jobs" data-nav="jobs edit">작업</a>
+      <a href="#runs" data-nav="runs">실행 이력</a>
+      <a href="#audit" data-nav="audit">감사 로그</a>
+    </nav>
+    <div class="who">
+      <span class="chip" title="설정 파일 timezone">TZ Asia/Seoul</span>
+      <span style="color:var(--text-2)">admin</span>
+      <a class="btn" href="#login">로그아웃</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ 작업 목록 ============ -->
+<section data-view="jobs" hidden>
+  <main class="wrap">
+    <div class="head">
+      <div><h1>작업</h1><p id="jobSummary"></p></div>
+      <a class="btn btn-primary btn-lg" href="#edit">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>새 작업
+      </a>
+    </div>
+    <div class="notice" id="runNotice" role="status" hidden>
+      <span id="runNoticeText"></span><a href="#runs" style="font-weight:600">실행 이력 보기</a>
+    </div>
+    <section class="stats" aria-label="최근 24시간 요약">
+      <div class="card stat"><span>최근 24시간 성공</span><b style="color:var(--ok)">412</b></div>
+      <div class="card stat"><span>최근 24시간 실패</span><b style="color:var(--bad)">7</b></div>
+      <div class="card stat"><span>지금 실행 중</span><b style="color:var(--accent)">2</b></div>
+      <div class="card stat"><span>활성 작업</span><b><span id="statEnabled"></span> <small style="font-size:16px;font-weight:500;color:var(--muted)">/ <span id="statTotal"></span></small></b></div>
+    </section>
+    <section class="card" aria-label="작업 목록">
+      <div class="filters">
+        <label class="field" style="flex:1 1 260px">작업 검색<input class="input" type="search" id="jobQ" placeholder="이름 또는 설명"></label>
+        <label class="field" style="flex:0 1 160px">유형<select class="input" id="jobType"><option value="">전체</option><option value="cli">CLI</option><option value="webhook">웹훅</option></select></label>
+        <label class="field" style="flex:0 1 170px">마지막 결과<select class="input" id="jobRes"><option value="">전체</option><option value="success">성공</option><option value="failure">실패</option><option value="timeout">시간 초과</option><option value="running">실행 중</option></select></label>
+      </div>
+      <div class="tbl-box">
+        <table style="min-width:1000px">
+          <thead><tr><th style="width:72px">활성</th><th>작업</th><th>유형</th><th>일정</th><th>다음 실행</th><th>마지막 결과</th><th style="text-align:right">동작</th></tr></thead>
+          <tbody id="jobRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>
+
+<!-- ============ 작업 편집 ============ -->
+<section data-view="edit" hidden>
+  <main class="wrap">
+    <div class="head">
+      <div><div class="crumb"><a href="#jobs">작업</a> / 편집</div><h1>주문 동기화</h1></div>
+      <div class="inline" style="flex-wrap:wrap">
+        <button class="btn btn-lg" type="button" id="editRun">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>지금 실행
+        </button>
+      </div>
+    </div>
+    <div class="split">
+      <form class="main-col card" id="editForm" novalidate>
+        <div class="card-h"><h2>기본 정보</h2></div>
+        <div class="card-b form-grid">
+          <label class="field">이름<input class="input" value="주문 동기화" maxlength="100"></label>
+          <div class="field">활성
+            <div class="inline" style="min-height:40px"><button type="button" class="sw" role="switch" aria-checked="true" aria-label="작업 활성" data-sw></button><span class="hint" style="font-size:13px">활성 상태일 때만 일정에 따라 실행됩니다.</span></div>
+          </div>
+          <label class="field full">설명<input class="input" value="ERP 주문 데이터를 5분마다 동기화"></label>
+        </div>
+
+        <div class="card-h" style="border-top:1px solid var(--line)"><h2>일정</h2><span class="chip">TZ Asia/Seoul · 설정 파일</span></div>
+        <div class="card-b form-grid">
+          <label class="field">크론 표현식
+            <input class="input mono" id="cronInput" value="*/5 * * * *" aria-describedby="cronHelp">
+            <span class="hint" id="cronHelp">5필드(분 단위) 또는 6필드(초 단위). 예: <span class="mono">*/30 * * * * *</span> = 30초마다</span>
+          </label>
+          <label class="field">타임아웃(초)
+            <input class="input" type="number" min="0" value="0" aria-describedby="toHelp">
+            <span class="hint" id="toHelp">0 = 무제한(기본값). 넘으면 프로세스를 종료하고 ‘시간 초과’로 기록합니다.</span>
+          </label>
+          <div class="alert alert-bad full" id="cronErr" role="alert" hidden>크론 표현식이 올바르지 않습니다. 필드는 5개 또는 6개여야 합니다.</div>
+        </div>
+
+        <div class="card-h" style="border-top:1px solid var(--line)"><h2>실행 방식</h2>
+          <div class="seg" role="group" aria-label="작업 유형">
+            <button type="button" data-type="cli" aria-pressed="false">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-5-6-5M12 19h8"/></svg>CLI</button>
+            <button type="button" data-type="webhook" aria-pressed="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>웹훅</button>
+          </div>
+        </div>
+
+        <!-- CLI -->
+        <div class="card-b form-grid" data-pane="cli" hidden>
+          <label class="field full">명령
+            <input class="input mono" value="python scripts/sync_orders.py --since 5m">
+            <span class="hint">Windows는 cmd.exe, Linux는 /bin/sh로 실행합니다. 종료 코드 0이면 성공입니다.</span>
+          </label>
+          <label class="field full">작업 디렉터리 <span class="hint">비우면 서버 작업 디렉터리</span>
+            <input class="input mono" placeholder="/opt/jobs 또는 C:\jobs">
+          </label>
+          <div class="field full">환경 변수 <span class="hint">감사 로그에는 값이 *** 로 가려져 기록됩니다.</span>
+            <div class="kv-list" data-kv="env">
+              <div class="kv"><input class="input mono k" aria-label="이름" value="PYTHONIOENCODING"><input class="input mono" aria-label="값" value="utf-8"><button type="button" class="btn icon-btn" aria-label="삭제" data-del>×</button></div>
+            </div>
+            <div><button type="button" class="btn" data-add="env">+ 변수 추가</button></div>
+          </div>
+        </div>
+
+        <!-- Webhook -->
+        <div class="card-b form-grid" data-pane="webhook">
+          <div class="field">메서드
+            <div class="seg" role="group" aria-label="HTTP 메서드">
+              <button type="button" data-method="GET" aria-pressed="false">GET</button>
+              <button type="button" data-method="POST" aria-pressed="true">POST</button>
+            </div>
+          </div>
+          <label class="field">실패 시 재시도
+            <select class="input"><option>0회 (기본)</option><option>1회</option><option selected>2회</option><option>3회</option><option>4회</option><option>5회</option></select>
+          </label>
+          <label class="field full">URL
+            <input class="input mono" type="url" value="https://erp.internal/api/orders/sync">
+            <span class="hint">리다이렉트(301·302·303·307·308)는 최대 10회까지 따라갑니다. 최종 응답이 2xx면 성공입니다.</span>
+          </label>
+          <div class="field full">요청 헤더 <span class="hint">감사 로그에는 값이 *** 로 가려져 기록됩니다.</span>
+            <div class="kv-list" data-kv="hdr">
+              <div class="kv"><input class="input mono k" aria-label="헤더 이름" value="Content-Type"><input class="input mono" aria-label="헤더 값" value="application/json"><button type="button" class="btn icon-btn" aria-label="삭제" data-del>×</button></div>
+              <div class="kv"><input class="input mono k" aria-label="헤더 이름" value="Authorization"><input class="input mono" aria-label="헤더 값" type="password" value="Bearer xxxxxxxx"><button type="button" class="btn icon-btn" aria-label="삭제" data-del>×</button></div>
+            </div>
+            <div><button type="button" class="btn" data-add="hdr">+ 헤더 추가</button></div>
+          </div>
+          <label class="field full" id="bodyField">본문 <span class="hint">POST일 때만 전송합니다.</span>
+            <textarea class="input mono">{
+  "source": "webcron",
+  "window": "5m"
+}</textarea>
+          </label>
+        </div>
+
+        <div class="footer-bar">
+          <button type="button" class="btn btn-danger">작업 삭제</button>
+          <div class="inline">
+            <a class="btn btn-lg" href="#jobs">취소</a>
+            <button type="submit" class="btn btn-primary btn-lg">저장</button>
+          </div>
+        </div>
+      </form>
+
+      <aside class="side-col" style="display:flex;flex-direction:column;gap:24px">
+        <section class="card">
+          <div class="card-h"><h2>다음 실행 예정</h2></div>
+          <div class="card-b" style="padding-top:8px;padding-bottom:8px"><ol class="next-list" id="nextList"></ol></div>
+        </section>
+        <section class="card">
+          <div class="card-h"><h2>최근 실행</h2><a href="#runs" style="font-size:13px;font-weight:600">전체 보기</a></div>
+          <div class="card-b" style="padding-top:8px;padding-bottom:8px">
+            <ol class="next-list">
+              <li>10-13 11:20:00 <span class="badge b-failure">HTTP 502</span></li>
+              <li>10-13 11:15:00 <span class="badge b-success">HTTP 200</span></li>
+              <li>10-13 11:10:00 <span class="badge b-success">HTTP 200</span></li>
+              <li>10-13 11:05:00 <span class="badge b-success">HTTP 200</span></li>
+              <li>10-13 11:00:00 <span class="badge b-success">HTTP 200</span></li>
+            </ol>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</section>
+
+<!-- ============ 실행 이력 ============ -->
+<section data-view="runs" hidden>
+  <main class="wrap">
+    <div class="head"><div><h1>실행 이력</h1><p>최근 30일 실행 기록입니다. 보관 기간이 지난 기록은 자동으로 정리됩니다.</p></div></div>
+    <div class="split">
+      <section class="card main-col" aria-label="실행 목록">
+        <div class="filters">
+          <label class="field" style="flex:1 1 200px">작업<select class="input" id="runJob"><option value="">전체 작업</option></select></label>
+          <label class="field" style="flex:0 1 150px">결과<select class="input" id="runRes"><option value="">전체</option><option value="success">성공</option><option value="failure">실패</option><option value="timeout">시간 초과</option><option value="running">실행 중</option><option value="interrupted">중단됨</option></select></label>
+          <label class="field" style="flex:0 1 160px">시작일<input class="input" type="date" value="2026-10-06"></label>
+          <label class="field" style="flex:0 1 160px">종료일<input class="input" type="date" value="2026-10-13"></label>
+        </div>
+        <div class="tbl-box">
+          <table style="min-width:760px">
+            <thead><tr><th>결과</th><th>작업</th><th>실행 방식</th><th>시작</th><th>소요</th><th>코드</th></tr></thead>
+            <tbody id="runRows"></tbody>
+          </table>
+        </div>
+        <div class="pager"><span>1–50 / 1,284건</span><div class="inline"><button class="btn" type="button" disabled>이전</button><button class="btn" type="button">다음</button></div></div>
+      </section>
+      <aside class="card side-col" aria-label="실행 상세" id="runDetail"></aside>
+    </div>
+  </main>
+</section>
+
+<!-- ============ 감사 로그 ============ -->
+<section data-view="audit" hidden>
+  <main class="wrap">
+    <div class="head"><div><h1>감사 로그</h1><p>감사 로그는 수정하거나 삭제할 수 없습니다. 보관 기간(30일)이 지나면 자동으로 정리됩니다.</p></div></div>
+    <div class="split">
+      <section class="card main-col" aria-label="감사 로그 목록">
+        <div class="filters">
+          <label class="field" style="flex:1 1 200px">이벤트<select class="input" id="audEv"><option value="">전체 이벤트</option></select></label>
+          <label class="field" style="flex:0 1 160px">시작일<input class="input" type="date" value="2026-10-06"></label>
+          <label class="field" style="flex:0 1 160px">종료일<input class="input" type="date" value="2026-10-13"></label>
+        </div>
+        <div class="tbl-box">
+          <table style="min-width:760px">
+            <thead><tr><th>시각</th><th>이벤트</th><th>대상</th><th>요청 IP</th><th>요약</th></tr></thead>
+            <tbody id="audRows"></tbody>
+          </table>
+        </div>
+        <div class="pager"><span>1–50 / 236건</span><div class="inline"><button class="btn" type="button" disabled>이전</button><button class="btn" type="button">다음</button></div></div>
+      </section>
+      <aside class="card side-col" aria-label="감사 로그 상세" id="audDetail"></aside>
+    </div>
+  </main>
+</section>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ICON = {
+  cli: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-5-6-5M12 19h8"/></svg>',
+  webhook: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>'
+};
+const RES = { success: '성공', failure: '실패', timeout: '시간 초과', running: '실행 중', interrupted: '중단됨' };
+
+/* ---------- 샘플 데이터 ---------- */
+const jobs = [
+  { id: 'backup', name: '일일 DB 백업', desc: 'sh /opt/jobs/backup.sh', type: 'cli', cron: '0 3 * * *', cronText: '매일 03:00', next: '10-14 03:00:00', res: 'success', label: '성공', last: '10-13 03:00 · 2분 14초', on: true },
+  { id: 'order', name: '주문 동기화', desc: 'POST https://erp.internal/api/orders/sync', type: 'webhook', cron: '*/5 * * * *', cronText: '5분마다', next: '10-13 11:25:00', res: 'failure', label: '실패 · HTTP 502', last: '10-13 11:20 · 0.8초', on: true },
+  { id: 'health', name: '헬스체크', desc: 'GET https://status.internal/ping', type: 'webhook', cron: '*/30 * * * * *', cronText: '30초마다', next: '10-13 11:22:30', res: 'success', label: '성공 · HTTP 200', last: '10-13 11:22 · 0.1초', on: true },
+  { id: 'warm', name: '캐시 워밍', desc: 'node scripts/warm-cache.js', type: 'cli', cron: '0 * * * *', cronText: '매시 정각', next: '10-13 12:00:00', res: 'running', label: '실행 중 · 2건', last: '10-13 11:00 시작', on: true },
+  { id: 'report', name: '주간 리포트 생성', desc: 'python report.py --weekly', type: 'cli', cron: '0 9 * * 1', cronText: '매주 월요일 09:00', next: '10-19 09:00:00', res: 'timeout', label: '시간 초과 · 600초', last: '10-12 09:00 · 10분', on: true },
+  { id: 'cleanup', name: '로그 압축', desc: 'C:\\jobs\\cleanup.bat', type: 'cli', cron: '30 2 * * *', cronText: '매일 02:30', next: '10-14 02:30:00', res: 'success', label: '성공', last: '10-10 02:30 · 41초', on: false }
+];
+
+const runs = [
+  { id: 'r-90412', job: '캐시 워밍', type: 'cli', trig: '스케줄', start: '10-13 11:00:00', dur: '22분 08초 경과', res: 'running', code: '—', cmd: 'node scripts/warm-cache.js', out: '[warm] 1/48 /products ... ok\n[warm] 2/48 /categories ... ok\n[warm] 3/48 /search?q=* ... ok', err: '' },
+  { id: 'r-90411', job: '캐시 워밍', type: 'cli', trig: '수동', start: '10-13 10:58:12', dur: '24분 56초 경과', res: 'running', code: '—', cmd: 'node scripts/warm-cache.js', out: '[warm] 31/48 /brands ... ok', err: '' },
+  { id: 'r-90410', job: '헬스체크', type: 'webhook', trig: '스케줄', start: '10-13 11:22:00', dur: '0.1초', res: 'success', code: 'HTTP 200', url: 'GET https://status.internal/ping', final: 'https://status.internal/ping', body: '{"status":"ok"}' },
+  { id: 'r-90409', job: '주문 동기화', type: 'webhook', trig: '스케줄', start: '10-13 11:20:00', dur: '0.8초', res: 'failure', code: 'HTTP 502', url: 'POST https://erp.internal/api/orders/sync', final: 'https://erp-gw.internal/v2/orders/sync', redirects: 1, tries: '3 / 3', body: '<html><head><title>502 Bad Gateway</title></head><body>upstream connect error</body></html>' },
+  { id: 'r-90401', job: '주문 동기화', type: 'webhook', trig: '스케줄', start: '10-13 11:15:00', dur: '0.6초', res: 'success', code: 'HTTP 200', url: 'POST https://erp.internal/api/orders/sync', final: 'https://erp-gw.internal/v2/orders/sync', redirects: 1, tries: '1 / 3', body: '{"synced":18}' },
+  { id: 'r-90350', job: '일일 DB 백업', type: 'cli', trig: '스케줄', start: '10-13 03:00:00', dur: '2분 14초', res: 'success', code: 'exit 0', cmd: 'sh /opt/jobs/backup.sh', out: 'pg_dump: dumping contents of table "orders"\npg_dump: done (1.8 GB)\ncopy -> //nas01/backup/2026-10-13.sql.gz ... ok', err: '' },
+  { id: 'r-90002', job: '주간 리포트 생성', type: 'cli', trig: '스케줄', start: '10-12 09:00:00', dur: '10분 00초', res: 'timeout', code: '시간 초과(600초)', cmd: 'python report.py --weekly', out: 'loading sales data...\naggregating 2,341,220 rows...', err: 'process tree killed by timeout (600s)' },
+  { id: 'r-89710', job: '로그 압축', type: 'cli', trig: '스케줄', start: '10-11 02:30:00', dur: '0.2초', res: 'failure', code: 'exit 1', cmd: 'C:\\jobs\\cleanup.bat', out: '', err: "'7z' is not recognized as an internal or external command,\noperable program or batch file." },
+  { id: 'r-89633', job: '일일 DB 백업', type: 'cli', trig: '스케줄', start: '10-10 03:00:00', dur: '48초', res: 'interrupted', code: '—', cmd: 'sh /opt/jobs/backup.sh', out: 'pg_dump: dumping contents of table "orders"', err: '서버 재기동으로 실행이 중단되었습니다.' }
+];
+
+const audits = [
+  { t: '10-13 11:21:40', ev: 'job.run_manual', evLabel: '수동 실행', target: '헬스체크', ip: '10.0.3.21', sum: '지금 실행' },
+  { t: '10-13 10:02:11', ev: 'job.update', evLabel: '작업 수정', target: '주문 동기화', ip: '10.0.3.21', sum: '필드 3개 변경',
+    diff: [['webhook.retryCount', '0', '2'], ['webhook.headers.Authorization', '***', '***'], ['timeoutSec', '0', '30']] },
+  { t: '10-13 09:58:03', ev: 'login.success', evLabel: '로그인 성공', target: '—', ip: '10.0.3.21', sum: 'admin' },
+  { t: '10-13 09:57:41', ev: 'login.failure', evLabel: '로그인 실패', target: '—', ip: '10.0.3.21', sum: '연속 실패 1회' },
+  { t: '10-12 18:30:00', ev: 'job.disable', evLabel: '작업 비활성', target: '로그 압축', ip: '10.0.3.21', sum: 'enabled: true → false' },
+  { t: '10-12 18:12:09', ev: 'job.create', evLabel: '작업 생성', target: '헬스체크', ip: '10.0.3.21', sum: '웹훅 · */30 * * * * *',
+    diff: [['name', '', '헬스체크'], ['cron', '', '*/30 * * * * *'], ['type', '', 'webhook'], ['webhook.method', '', 'GET'], ['webhook.url', '', 'https://status.internal/ping']] },
+  { t: '10-12 07:00:02', ev: 'login.locked', evLabel: '로그인 차단', target: '—', ip: '203.0.113.50', sum: '5회 연속 실패 · 5분 차단' },
+  { t: '10-12 06:59:58', ev: 'server.start', evLabel: '서버 시작', target: '—', ip: '—', sum: 'v0.1.0 · 작업 6개 복원 · 중단 1건 마감' },
+  { t: '10-12 06:59:58', ev: 'config.password_encrypted', evLabel: '비밀번호 변환', target: '—', ip: '—', sum: '평문 비밀번호를 enc 해시로 변환' },
+  { t: '10-12 06:59:51', ev: 'server.stop', evLabel: '서버 종료', target: '—', ip: '—', sum: 'SIGTERM' }
+];
+
+/* ---------- 라우팅 ---------- */
+function route() {
+  const v = (location.hash || '#jobs').slice(1);
+  const view = $(`[data-view="${v}"]`) ? v : 'jobs';
+  $$('[data-view]').forEach((s) => (s.hidden = s.dataset.view !== view));
+  $('#appHeader').hidden = view === 'login';
+  $$('.nav a').forEach((a) => a.dataset.nav.split(' ').includes(view) ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  $$('.demo a').forEach((a) => a.getAttribute('href') === '#' + view ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  window.scrollTo(0, 0);
+}
+addEventListener('hashchange', route);
+
+/* ---------- 로그인 ---------- */
+let fails = 0;
+$('#loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if ($('[name=pw]').value) { fails = 0; $('#loginErr').hidden = $('#loginLock').hidden = true; location.hash = '#jobs'; return; }
+  fails++;
+  $('#loginErr').hidden = fails >= 3;
+  $('#loginLock').hidden = fails < 3;
+});
+
+/* ---------- 작업 목록 ---------- */
+function renderJobs() {
+  const q = $('#jobQ').value.trim(), t = $('#jobType').value, r = $('#jobRes').value;
+  const list = jobs.filter((j) => (!q || (j.name + j.desc).includes(q)) && (!t || j.type === t) && (!r || j.res === r));
+  $('#jobRows').innerHTML = list.map((j) => `
+    <tr class="${j.on ? '' : 'off'}">
+      <td><button type="button" class="sw" role="switch" aria-checked="${j.on}" aria-label="${esc(j.name)} 활성 전환" data-toggle="${j.id}"></button></td>
+      <td><a class="t-main" href="#edit">${esc(j.name)}</a><span class="t-sub">${esc(j.desc)}</span></td>
+      <td><span class="type">${ICON[j.type]}${j.type === 'cli' ? 'CLI' : '웹훅'}</span></td>
+      <td><span class="mono" style="font-size:13px">${esc(j.cron)}</span><span class="t-sub" style="font-size:12px">${j.cronText}</span></td>
+      <td class="mono" style="font-size:13px;white-space:nowrap">${j.on ? j.next : '— 비활성'}</td>
+      <td><span class="badge b-${j.res}">${j.label}</span><span class="t-sub" style="font-size:12px;margin-top:4px;white-space:nowrap">${j.last}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button type="button" class="btn" data-run="${j.id}">${ICON.play}지금 실행</button>
+        <a class="btn" href="#edit" style="margin-left:6px">편집</a>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">조건에 맞는 작업이 없습니다.</td></tr>`;
+  const en = jobs.filter((j) => j.on).length;
+  $('#jobSummary').textContent = `등록된 작업 ${jobs.length}개 · 활성 ${en}개`;
+  $('#statEnabled').textContent = en; $('#statTotal').textContent = jobs.length;
+}
+$('#jobRows').addEventListener('click', (e) => {
+  const tg = e.target.closest('[data-toggle]'), rn = e.target.closest('[data-run]');
+  if (tg) { const j = jobs.find((x) => x.id === tg.dataset.toggle); j.on = !j.on; renderJobs(); }
+  if (rn) { const j = jobs.find((x) => x.id === rn.dataset.run); $('#runNoticeText').textContent = `‘${j.name}’ 작업을 지금 실행했습니다. 결과는 실행 이력에서 확인하세요.`; $('#runNotice').hidden = false; }
+});
+['#jobQ', '#jobType', '#jobRes'].forEach((s) => $(s).addEventListener('input', renderJobs));
+
+/* ---------- 작업 편집 ---------- */
+function setType(type) {
+  $$('[data-type]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.type === type));
+  $$('[data-pane]').forEach((p) => (p.hidden = p.dataset.pane !== type));
+}
+function setMethod(m) {
+  $$('[data-method]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.method === m));
+  $('#bodyField').hidden = m !== 'POST';
+}
+$$('[data-type]').forEach((b) => b.addEventListener('click', () => setType(b.dataset.type)));
+$$('[data-method]').forEach((b) => b.addEventListener('click', () => setMethod(b.dataset.method)));
+$$('[data-sw]').forEach((b) => b.addEventListener('click', () => b.setAttribute('aria-checked', b.getAttribute('aria-checked') !== 'true')));
+document.addEventListener('click', (e) => {
+  const del = e.target.closest('[data-del]');
+  if (del) del.closest('.kv').remove();
+  const add = e.target.closest('[data-add]');
+  if (add) {
+    const row = document.createElement('div'); row.className = 'kv';
+    row.innerHTML = '<input class="input mono k" aria-label="이름" placeholder="이름"><input class="input mono" aria-label="값" placeholder="값"><button type="button" class="btn icon-btn" aria-label="삭제" data-del>×</button>';
+    $(`[data-kv="${add.dataset.add}"]`).append(row);
+  }
+});
+function renderNext() {
+  const f = $('#cronInput').value.trim().split(/\s+/);
+  const ok = f.length === 5 || f.length === 6;
+  $('#cronErr').hidden = ok;
+  $('#cronInput').setAttribute('aria-invalid', !ok);
+  if (!ok) { $('#nextList').innerHTML = '<li><span>올바른 표현식을 입력하면 미리 보기가 나타납니다.</span></li>'; return; }
+  const step = f.length === 6 ? 30 : 300; // 시안: 실제 계산은 서버(croner)가 수행
+  const base = new Date('2026-10-13T11:25:00');
+  $('#nextList').innerHTML = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(base.getTime() + i * step * 1000);
+    const p = (n) => String(n).padStart(2, '0');
+    return `<li>${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}<span>${i === 0 ? '다음' : '+' + i}</span></li>`;
+  }).join('');
+}
+$('#cronInput').addEventListener('input', renderNext);
+$('#editForm').addEventListener('submit', (e) => { e.preventDefault(); location.hash = '#jobs'; });
+$('#editRun').addEventListener('click', () => { $('#runNoticeText').textContent = '‘주문 동기화’ 작업을 지금 실행했습니다. 결과는 실행 이력에서 확인하세요.'; $('#runNotice').hidden = false; location.hash = '#jobs'; });
+
+/* ---------- 실행 이력 ---------- */
+let selRun = runs[3].id;
+$('#runJob').innerHTML += [...new Set(runs.map((r) => r.job))].map((n) => `<option>${esc(n)}</option>`).join('');
+function renderRuns() {
+  const jf = $('#runJob').value, rf = $('#runRes').value;
+  const list = runs.filter((r) => (!jf || r.job === jf) && (!rf || r.res === rf));
+  $('#runRows').innerHTML = list.map((r) => `
+    <tr class="${r.id === selRun ? 'sel' : ''}">
+      <td><span class="badge b-${r.res}">${RES[r.res]}</span></td>
+      <td><button type="button" class="linkbtn" data-sel="${r.id}">${esc(r.job)}</button><span class="t-sub mono" style="font-size:12px">${r.id}</span></td>
+      <td><span class="type">${ICON[r.type]}${r.trig}</span></td>
+      <td class="mono" style="font-size:13px;white-space:nowrap">${r.start}</td>
+      <td style="white-space:nowrap">${r.dur}</td>
+      <td class="mono" style="font-size:13px;white-space:nowrap">${esc(r.code)}</td>
+    </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">조건에 맞는 실행 기록이 없습니다.</td></tr>`;
+  const r = runs.find((x) => x.id === selRun);
+  const isCli = r.type === 'cli';
+  $('#runDetail').innerHTML = `
+    <div class="card-h"><h2>${esc(r.job)}</h2><span class="badge b-${r.res}">${RES[r.res]}</span></div>
+    <div class="card-b">
+      <dl class="meta">
+        <dt>실행 ID</dt><dd class="mono">${r.id}</dd>
+        <dt>실행 방식</dt><dd>${r.trig}</dd>
+        <dt>시작</dt><dd class="mono">2026-${r.start}</dd>
+        <dt>소요</dt><dd>${r.dur}</dd>
+        ${isCli ? `<dt>명령</dt><dd class="mono">${esc(r.cmd)}</dd><dt>종료 코드</dt><dd class="mono">${esc(r.code)}</dd>`
+                : `<dt>요청</dt><dd class="mono">${esc(r.url)}</dd><dt>최종 URL</dt><dd class="mono">${esc(r.final)}</dd>
+                   <dt>상태 코드</dt><dd class="mono">${esc(r.code)}</dd>${r.redirects ? `<dt>리다이렉트</dt><dd>${r.redirects}회</dd>` : ''}${r.tries ? `<dt>시도</dt><dd>${r.tries}</dd>` : ''}`}
+      </dl>
+      ${r.res === 'running' ? `<div style="margin-top:16px" class="alert" role="status"><span class="badge b-running">실행 중</span> 끝나면 결과가 자동으로 갱신됩니다.</div>` : ''}
+      ${isCli ? `
+        <div class="out-h"><span>stdout</span><span class="hint">최대 64KB 저장</span></div><pre class="out">${esc(r.out || '(출력 없음)')}</pre>
+        <div class="out-h"><span>stderr</span></div><pre class="out">${esc(r.err || '(출력 없음)')}</pre>`
+      : `<div class="out-h"><span>응답 본문</span><span class="hint">최대 64KB 저장</span></div><pre class="out">${esc(r.body)}</pre>`}
+    </div>`;
+}
+$('#runRows').addEventListener('click', (e) => { const b = e.target.closest('[data-sel]'); if (b) { selRun = b.dataset.sel; renderRuns(); } });
+['#runJob', '#runRes'].forEach((s) => $(s).addEventListener('input', renderRuns));
+
+/* ---------- 감사 로그 ---------- */
+let selAud = 1;
+$('#audEv').innerHTML += [...new Map(audits.map((a) => [a.ev, a.evLabel]))].map(([v, l]) => `<option value="${v}">${l} (${v})</option>`).join('');
+function renderAudit() {
+  const ef = $('#audEv').value;
+  $('#audRows').innerHTML = audits.map((a, i) => ({ a, i })).filter(({ a }) => !ef || a.ev === ef).map(({ a, i }) => `
+    <tr class="${i === selAud ? 'sel' : ''}">
+      <td class="mono" style="font-size:13px;white-space:nowrap">${a.t}</td>
+      <td><button type="button" class="linkbtn" data-aud="${i}">${a.evLabel}</button><span class="t-sub"><span class="ev">${a.ev}</span></span></td>
+      <td>${esc(a.target)}</td>
+      <td class="mono" style="font-size:13px">${a.ip}</td>
+      <td style="color:var(--text-2)">${esc(a.sum)}</td>
+    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px">조건에 맞는 기록이 없습니다.</td></tr>`;
+  const a = audits[selAud];
+  $('#audDetail').innerHTML = `
+    <div class="card-h"><h2>${a.evLabel}</h2><span class="ev">${a.ev}</span></div>
+    <div class="card-b">
+      <dl class="meta">
+        <dt>시각</dt><dd class="mono">2026-${a.t}</dd>
+        <dt>대상</dt><dd>${esc(a.target)}</dd>
+        <dt>요청 IP</dt><dd class="mono">${a.ip}</dd>
+        <dt>요약</dt><dd>${esc(a.sum)}</dd>
+      </dl>
+      ${a.diff ? `<div class="out-h"><span>변경 내용</span><span class="hint">헤더·환경 변수 값은 *** 로 가림</span></div>
+        <div class="tbl-box"><table class="diff"><thead><tr><th>필드</th><th>변경 전</th><th>변경 후</th></tr></thead><tbody>
+        ${a.diff.map(([f, o, n]) => `<tr><td class="mono">${esc(f)}</td><td class="mono old">${esc(o || '—')}</td><td class="mono new">${esc(n)}</td></tr>`).join('')}
+        </tbody></table></div>` : ''}
+    </div>`;
+}
+$('#audRows').addEventListener('click', (e) => { const b = e.target.closest('[data-aud]'); if (b) { selAud = +b.dataset.aud; renderAudit(); } });
+$('#audEv').addEventListener('input', renderAudit);
+
+/* ---------- 시작 ---------- */
+setType('webhook'); setMethod('POST'); renderJobs(); renderNext(); renderRuns(); renderAudit(); route();
+</script>
+</body>
+</html>
