@@ -8,6 +8,7 @@
   import JobEdit from './pages/JobEdit.svelte';
   import Jobs from './pages/Jobs.svelte';
   import Login from './pages/Login.svelte';
+  import McpKeys from './pages/McpKeys.svelte';
   import Runs from './pages/Runs.svelte';
 
   onMount(async () => {
@@ -47,10 +48,10 @@
         <a href="#/jobs" aria-current={section === 'jobs' ? 'page' : undefined}>작업</a>
         <a href="#/runs" aria-current={section === 'runs' ? 'page' : undefined}>실행 이력</a>
         <a href="#/audit" aria-current={section === 'audit' ? 'page' : undefined}>감사 로그</a>
+        <a href="#/mcp" aria-current={section === 'mcp' ? 'page' : undefined}>MCP</a>
       </nav>
       <div class="who">
         <span class="chip" title="설정 파일 WEBCRON_TIMEZONE">TZ {session.me.timezone}</span>
-        <span style="color:var(--text-2)">{session.me.username}</span>
         <button class="btn" type="button" onclick={logout}>로그아웃</button>
       </div>
     </div>
@@ -63,6 +64,8 @@
       <Runs />
     {:else if section === 'audit'}
       <Audit />
+    {:else if section === 'mcp'}
+      <McpKeys />
     {:else}
       <Jobs />
     {/if}

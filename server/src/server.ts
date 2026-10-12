@@ -1,15 +1,15 @@
 // OPS-WEBCRON-002: 상시 구동과 정상 종료, REL-WEBCRON-001: 재기동 복원, DR-WEBCRON-002: 보관 기간 정리
-import { readFileSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.ts';
 import { loadConfig, type Config } from './config.ts';
 import { Store } from './db.ts';
 import { Runner } from './runner.ts';
 import { Scheduler } from './scheduler.ts';
+import { VERSION } from './version.ts';
 
 const DAY = 86_400_000;
 
-export const VERSION: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version;
+export { VERSION };
 
 export interface Running {
   config: Config;

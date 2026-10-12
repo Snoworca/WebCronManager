@@ -84,6 +84,15 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   detail TEXT
 );
 CREATE INDEX IF NOT EXISTS audit_at ON audit_logs(at DESC);
+CREATE TABLE IF NOT EXISTS mcp_keys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  prefix TEXT NOT NULL,
+  key_hash TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL,
+  last_used_at INTEGER,
+  revoked_at INTEGER
+);
 `;
 
 type Row = Record<string, SQLInputValue>;
@@ -119,6 +128,22 @@ function toAudit(r: Row): AuditEntry {
     id: r.id as number, at: r.at as number, event: r.event as string, ip: (r.ip as string) ?? null,
     jobId: (r.job_id as number) ?? null, jobName: (r.job_name as string) ?? null,
     detail: r.detail ? JSON.parse(r.detail as string) : null,
+  };
+}
+
+export interface McpKey {
+  id: number;
+  name: string;
+  prefix: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+  revokedAt: number | null;
+}
+
+function toMcpKey(r: Row): McpKey {
+  return {
+    id: r.id as number, name: r.name as string, prefix: r.prefix as string, createdAt: r.created_at as number,
+    lastUsedAt: (r.last_used_at as number) ?? null, revokedAt: (r.revoked_at as number) ?? null,
   };
 }
 
@@ -256,6 +281,36 @@ export class Store {
     const rows = this.db.prepare(`SELECT * FROM audit_logs ${w} ORDER BY at DESC, id DESC LIMIT ? OFFSET ?`)
       .all(...args, PAGE_SIZE, (page - 1) * PAGE_SIZE) as Row[];
     return { items: rows.map(toAudit), total, page, pageSize: PAGE_SIZE };
+  }
+
+  // ---------- MCP keys (FR-WEBCRON-010, SEC-WEBCRON-005) ----------
+  createMcpKey(a: { name: string; prefix: string; keyHash: string; at: number }): McpKey {
+    const res = this.db.prepare('INSERT INTO mcp_keys (name, prefix, key_hash, created_at) VALUES (?, ?, ?, ?)')
+      .run(a.name, a.prefix, a.keyHash, a.at);
+    return this.getMcpKey(Number(res.lastInsertRowid))!;
+  }
+
+  getMcpKey(id: number): McpKey | null {
+    const r = this.db.prepare('SELECT * FROM mcp_keys WHERE id = ?').get(id) as Row | undefined;
+    return r ? toMcpKey(r) : null;
+  }
+
+  listMcpKeys(): McpKey[] {
+    return (this.db.prepare('SELECT * FROM mcp_keys ORDER BY revoked_at IS NOT NULL, created_at DESC, id DESC').all() as Row[]).map(toMcpKey);
+  }
+
+  /** 폐기되지 않은 키만 찾는다. */
+  findActiveMcpKey(keyHash: string): McpKey | null {
+    const r = this.db.prepare('SELECT * FROM mcp_keys WHERE key_hash = ? AND revoked_at IS NULL').get(keyHash) as Row | undefined;
+    return r ? toMcpKey(r) : null;
+  }
+
+  touchMcpKey(id: number, at: number): void {
+    this.db.prepare('UPDATE mcp_keys SET last_used_at = ? WHERE id = ?').run(at, id);
+  }
+
+  revokeMcpKey(id: number, at: number): void {
+    this.db.prepare('UPDATE mcp_keys SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL').run(at, id);
   }
 
   // ---------- retention ----------

@@ -56,8 +56,10 @@ export interface AuditEntry {
 
 export interface Page<T> { items: T[]; total: number; page: number; pageSize: number }
 
-export interface Me { username: string; timezone: string; logRetentionDays: number }
+export interface Me { timezone: string; logRetentionDays: number }
 
 export interface Stats { success24h: number; failure24h: number; running: number; enabledJobs: number; totalJobs: number }
+
+export interface McpKey { id: number; name: string; prefix: string; createdAt: number; lastUsedAt: number | null; revokedAt: number | null }
 
 export interface Pair { key: string; value: string }

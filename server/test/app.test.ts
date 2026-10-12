@@ -23,12 +23,12 @@ function setup(fn: (c: Ctx) => Promise<void>) {
     const scheduler = new Scheduler('Asia/Seoul', () => {});
     const clock = { t: Date.now() };
     const config: Config = {
-      envPath: join(t.dir, '.env'), host: '127.0.0.1', port: 0, username: 'admin', passwordHash: HASH,
+      envPath: join(t.dir, '.env'), host: '127.0.0.1', port: 0, passwordHash: HASH,
       sessionTtlMinutes: 10, timezone: 'Asia/Seoul', logRetentionDays: 30, dataDir: join(t.dir, 'data'),
     };
     const app = await buildApp({ config, store, runner, scheduler, now: () => clock.t });
     try {
-      const res = await login(app, 'admin', PASSWORD);
+      const res = await login(app, PASSWORD);
       assert.equal(res.statusCode, 200);
       await fn({ app, store, runner, scheduler, clock, cookie: cookieOf(res) });
     } finally {
@@ -41,8 +41,8 @@ function setup(fn: (c: Ctx) => Promise<void>) {
   };
 }
 
-function login(app: FastifyInstance, username: string, password: string, ip = '10.0.0.1') {
-  return app.inject({ method: 'POST', url: '/api/login', payload: { username, password }, remoteAddress: ip });
+function login(app: FastifyInstance, password: string, ip = '10.0.0.1') {
+  return app.inject({ method: 'POST', url: '/api/login', payload: { password }, remoteAddress: ip });
 }
 
 function cookieOf(res: LightMyRequestResponse): string {
@@ -70,19 +70,17 @@ const hookJob = (over: Record<string, unknown> = {}) => ({
 const auditEvents = (c: Ctx) => c.store.listAudit({ page: 1 }).items.map((a) => a.event);
 
 test('SEC-WEBCRON-001 AC-1: 로그인하면 HttpOnly, SameSite=Strict 세션 쿠키를 발급한다', setup(async (c) => {
-  const res = await login(c.app, 'admin', PASSWORD);
+  const res = await login(c.app, PASSWORD);
   const raw = String(res.headers['set-cookie']);
   assert.match(raw, /HttpOnly/i);
   assert.match(raw, /SameSite=Strict/i);
   assert.equal((await api(c, 'GET', '/api/me')).statusCode, 200);
 }));
 
-test('SEC-WEBCRON-001 AC-2: 아이디나 비밀번호가 틀리면 같은 401 응답을 준다', setup(async (c) => {
-  const a = await login(c.app, 'admin', 'wrong', '10.0.0.2');
-  const b = await login(c.app, 'nobody', PASSWORD, '10.0.0.3');
-  assert.equal(a.statusCode, 401);
-  assert.equal(b.statusCode, 401);
-  assert.equal(a.body, b.body);
+test('SEC-WEBCRON-001 AC-2: 비밀번호가 틀리면 401이다', setup(async (c) => {
+  assert.equal((await login(c.app, 'wrong', '10.0.0.2')).statusCode, 401);
+  const noPw = await c.app.inject({ method: 'POST', url: '/api/login', payload: {}, remoteAddress: '10.0.0.3' });
+  assert.equal(noPw.statusCode, 401);
 }));
 
 test('SEC-WEBCRON-001 AC-3: 인증 없는 API 요청은 401이다', setup(async (c) => {
@@ -109,17 +107,17 @@ test('SEC-WEBCRON-001 AC-5: 로그아웃하면 세션이 무효가 된다', setu
 
 test('SEC-WEBCRON-003 AC-1~AC-4: 5회 연속 실패하면 5분 동안 429를 준다', setup(async (c) => {
   const ip = '10.9.9.9';
-  for (let i = 0; i < 5; i++) assert.equal((await login(c.app, 'admin', 'bad', ip)).statusCode, 401);
-  assert.equal((await login(c.app, 'admin', PASSWORD, ip)).statusCode, 429);
+  for (let i = 0; i < 5; i++) assert.equal((await login(c.app, 'bad', ip)).statusCode, 401);
+  assert.equal((await login(c.app, PASSWORD, ip)).statusCode, 429);
   assert.ok(auditEvents(c).includes('login.locked'));
-  assert.equal((await login(c.app, 'admin', PASSWORD, '10.9.9.8')).statusCode, 200, '다른 IP는 영향 없음');
+  assert.equal((await login(c.app, PASSWORD, '10.9.9.8')).statusCode, 200, '다른 IP는 영향 없음');
   c.clock.t += 5 * 60_000 + 1000;
-  assert.equal((await login(c.app, 'admin', PASSWORD, ip)).statusCode, 200);
+  assert.equal((await login(c.app, PASSWORD, ip)).statusCode, 200);
   // AC-3: 성공하면 실패 횟수가 초기화된다
-  for (let i = 0; i < 4; i++) await login(c.app, 'admin', 'bad', ip);
-  assert.equal((await login(c.app, 'admin', PASSWORD, ip)).statusCode, 200);
-  for (let i = 0; i < 4; i++) await login(c.app, 'admin', 'bad', ip);
-  assert.equal((await login(c.app, 'admin', PASSWORD, ip)).statusCode, 200);
+  for (let i = 0; i < 4; i++) await login(c.app, 'bad', ip);
+  assert.equal((await login(c.app, PASSWORD, ip)).statusCode, 200);
+  for (let i = 0; i < 4; i++) await login(c.app, 'bad', ip);
+  assert.equal((await login(c.app, PASSWORD, ip)).statusCode, 200);
 }));
 
 test('FR-WEBCRON-001 AC-1, AC-2, AC-5: 작업을 만들고 수정하면 목록과 스케줄에 바로 반영된다', setup(async (c) => {
@@ -234,7 +232,7 @@ test('FR-WEBCRON-009 AC-3, AC-4: 실행 중인 작업을 중지하고 끝난 실
 test('OBS-WEBCRON-001 AC-1, AC-2, SEC-WEBCRON-004: 감사 로그를 남기고 비밀 값은 가린다', setup(async (c) => {
   const job = (await api(c, 'POST', '/api/jobs', hookJob())).json();
   await api(c, 'PUT', `/api/jobs/${job.id}`, hookJob({ name: '웹훅2', webhook: { method: 'POST', url: 'http://127.0.0.1:1/y', headers: { Authorization: 'Bearer zzz' }, body: '{}', retryCount: 2 } }));
-  await login(c.app, 'admin', 'bad', '10.1.1.1');
+  await login(c.app, 'bad', '10.1.1.1');
   const ev = auditEvents(c);
   for (const e of ['login.success', 'login.failure', 'job.create', 'job.update']) assert.ok(ev.includes(e), e);
   const upd = c.store.listAudit({ event: 'job.update', page: 1 }).items[0];

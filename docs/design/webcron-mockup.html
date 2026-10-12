@@ -134,6 +134,12 @@ pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:
 .login-card{width:100%;max-width:400px;padding:36px 32px;display:flex;flex-direction:column;gap:20px}
 .login-card h1{margin:0;font-size:22px}
 
+/* mcp */
+.keybox{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.keybox code{flex:1 1 320px;background:#F1F3F6;border-radius:8px;padding:10px 12px;word-break:break-all;font-family:var(--mono);font-size:13px}
+.tools{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px 12px;margin:0}
+.tools dt{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.tools dd{margin:0}
 /* demo switcher */
 .demo{position:fixed;right:16px;bottom:16px;z-index:9;background:var(--code-bg);color:#fff;border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);max-width:calc(100vw - 32px)}
 .demo a{color:#C9D2FF;text-decoration:none;padding:4px 8px;border-radius:6px}
@@ -146,7 +152,7 @@ pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:
 <!-- 시안 탐색용 (실제 화면에는 없음) -->
 <nav class="demo" aria-label="시안 화면 이동">
   <strong style="padding:0 6px">시안</strong>
-  <a href="#login">로그인</a><a href="#jobs">작업</a><a href="#edit">작업 편집</a><a href="#runs">실행 이력</a><a href="#audit">감사 로그</a>
+  <a href="#login">로그인</a><a href="#jobs">작업</a><a href="#edit">작업 편집</a><a href="#runs">실행 이력</a><a href="#audit">감사 로그</a><a href="#mcp">MCP</a>
 </nav>
 
 <!-- ============ 로그인 ============ -->
@@ -159,11 +165,10 @@ pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:
       </div>
       <div>
         <h1>로그인</h1>
-        <p style="margin:4px 0 0;color:var(--muted)">관리자 계정으로 로그인하세요.</p>
+        <p style="margin:4px 0 0;color:var(--muted)">관리자 비밀번호를 입력하세요.</p>
       </div>
-      <div class="alert alert-bad" id="loginErr" role="alert" hidden>아이디 또는 비밀번호가 올바르지 않습니다. (남은 시도 3회)</div>
+      <div class="alert alert-bad" id="loginErr" role="alert" hidden>비밀번호가 올바르지 않습니다. (남은 시도 3회)</div>
       <div class="alert alert-warn" id="loginLock" role="alert" hidden>로그인을 5회 연속 실패했습니다. 4분 52초 뒤에 다시 시도하세요.</div>
-      <label class="field">아이디<input class="input" name="id" autocomplete="username" value="admin"></label>
       <label class="field">비밀번호<input class="input" name="pw" type="password" autocomplete="current-password" placeholder="비밀번호"></label>
       <button class="btn btn-primary btn-lg" type="submit">로그인</button>
       <p class="hint" style="margin:0">비밀번호를 비워 두고 누르면 오류 상태를, 세 번 누르면 차단 상태를 볼 수 있습니다.</p>
@@ -182,10 +187,10 @@ pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:
       <a href="#jobs" data-nav="jobs edit">작업</a>
       <a href="#runs" data-nav="runs">실행 이력</a>
       <a href="#audit" data-nav="audit">감사 로그</a>
+      <a href="#mcp" data-nav="mcp">MCP</a>
     </nav>
     <div class="who">
       <span class="chip" title="설정 파일 timezone">TZ Asia/Seoul</span>
-      <span style="color:var(--text-2)">admin</span>
       <a class="btn" href="#login">로그아웃</a>
     </div>
   </div>
@@ -396,6 +401,78 @@ pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:
   </main>
 </section>
 
+<!-- ============ MCP ============ -->
+<section data-view="mcp" hidden>
+  <main class="wrap">
+    <div class="head"><div><h1>MCP</h1><p>MCP 클라이언트(Claude Code 등)가 작업을 조회·생성·삭제할 수 있도록 키를 발급합니다.</p></div></div>
+    <div class="alert alert-warn" role="note">MCP 키가 있으면 이 서버에서 CLI 명령을 실행하는 작업도 만들 수 있습니다. 키는 비밀번호처럼 보관하고, 쓰지 않는 키는 폐기하세요.</div>
+    <div class="split">
+      <div class="main-col" style="display:flex;flex-direction:column;gap:24px">
+        <section class="card" aria-label="키 발급">
+          <div class="card-h"><h2>키 발급</h2></div>
+          <form class="card-b" id="keyForm" novalidate style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px">
+            <label class="field" style="flex:1 1 260px">키 이름
+              <input class="input" id="keyName" maxlength="100" placeholder="예: 내 노트북 Claude Code">
+              <span class="err-text" id="keyErr" hidden style="color:var(--bad);font-size:12px;font-weight:500">이름은 1~100자로 입력하세요.</span>
+            </label>
+            <button class="btn btn-primary btn-lg" type="submit">키 발급</button>
+          </form>
+          <div class="card-b" id="issuedBox" hidden style="border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px">
+            <div class="alert alert-warn" role="status"><span id="issuedName"></span> 키를 발급했습니다. 이 키는 지금 한 번만 표시됩니다. 바로 복사해 두세요.</div>
+            <div class="keybox"><code id="issuedKey"></code><button class="btn" type="button" data-copy="key">키 복사</button></div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="MCP 등록 방법">
+          <div class="card-h"><h2>MCP 등록 방법</h2></div>
+          <div class="card-b">
+            <dl class="meta">
+              <dt>엔드포인트</dt><dd class="mono">http://127.0.0.1:8080/mcp</dd>
+              <dt>전송 방식</dt><dd>Streamable HTTP</dd>
+              <dt>인증 헤더</dt><dd class="mono">Authorization: Bearer &lt;키&gt;</dd>
+            </dl>
+            <div class="out-h"><span>Claude Code</span><button class="btn" type="button" data-copy="cli">복사</button></div>
+            <pre class="out" id="cliEx"></pre>
+            <div class="out-h"><span>.mcp.json</span><button class="btn" type="button" data-copy="json">복사</button></div>
+            <pre class="out" id="jsonEx"></pre>
+            <p class="hint" style="margin:10px 0 0">AI 도구에 새 MCP 서버를 등록하기 전에 사내 정보보호팀 승인 절차를 확인하세요.</p>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side-col card" aria-label="제공 도구">
+        <div class="card-h"><h2>제공 도구</h2></div>
+        <div class="card-b">
+          <dl class="tools">
+            <dt>list_jobs</dt><dd>모든 작업과 다음 실행 시각, 마지막 결과를 조회합니다.</dd>
+            <dt>create_job</dt><dd>CLI 또는 웹훅 작업을 만들고 바로 일정에 등록합니다. 입력 검증은 웹 화면과 같습니다.</dd>
+            <dt>delete_job</dt><dd>ID로 작업을 삭제합니다. 실행 이력은 남습니다.</dd>
+          </dl>
+          <div class="out-h"><span>사용 예</span></div>
+          <pre class="out">사용자: 매주 월요일 9시에 리포트 웹훅 호출하는 작업 만들어 줘
+→ create_job {
+    "name": "주간 리포트 호출",
+    "cron": "0 9 * * 1",
+    "type": "webhook",
+    "webhook": { "method": "POST",
+                 "url": "https://report.internal/run" }
+  }</pre>
+        </div>
+      </aside>
+    </div>
+
+    <section class="card" aria-label="발급된 키">
+      <div class="card-h"><h2>발급된 키</h2></div>
+      <div class="tbl-box">
+        <table style="min-width:720px">
+          <thead><tr><th>이름</th><th>키 접두사</th><th>발급</th><th>마지막 사용</th><th>상태</th><th style="text-align:right">동작</th></tr></thead>
+          <tbody id="keyRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>
+
 <script>
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -430,6 +507,9 @@ const runs = [
 ];
 
 const audits = [
+  { t: '10-13 11:30:02', ev: 'job.create', evLabel: '작업 생성', target: '주간 리포트 호출', ip: '10.0.3.40', sum: '웹훅 · 0 9 * * 1 · MCP(운영 자동화 에이전트)',
+    diff: [['name', '', '주간 리포트 호출'], ['cron', '', '0 9 * * 1'], ['type', '', 'webhook'], ['webhook.method', '', 'POST'], ['via', '', 'mcp'], ['mcpKey', '', '운영 자동화 에이전트']] },
+  { t: '10-13 10:12:40', ev: 'mcp_key.create', evLabel: 'MCP 키 발급', target: '—', ip: '10.0.3.21', sum: '내 노트북 Claude Code (wcmcp_Q7f2kd…)' },
   { t: '10-13 11:21:40', ev: 'job.run_manual', evLabel: '수동 실행', target: '헬스체크', ip: '10.0.3.21', sum: '지금 실행' },
   { t: '10-13 10:02:11', ev: 'job.update', evLabel: '작업 수정', target: '주문 동기화', ip: '10.0.3.21', sum: '필드 3개 변경',
     diff: [['webhook.retryCount', '0', '2'], ['webhook.headers.Authorization', '***', '***'], ['timeoutSec', '0', '30']] },
@@ -574,7 +654,7 @@ $('#runRows').addEventListener('click', (e) => { const b = e.target.closest('[da
 ['#runJob', '#runRes'].forEach((s) => $(s).addEventListener('input', renderRuns));
 
 /* ---------- 감사 로그 ---------- */
-let selAud = 1;
+let selAud = 0;
 $('#audEv').innerHTML += [...new Map(audits.map((a) => [a.ev, a.evLabel]))].map(([v, l]) => `<option value="${v}">${l} (${v})</option>`).join('');
 function renderAudit() {
   const ef = $('#audEv').value;
@@ -605,8 +685,63 @@ function renderAudit() {
 $('#audRows').addEventListener('click', (e) => { const b = e.target.closest('[data-aud]'); if (b) { selAud = +b.dataset.aud; renderAudit(); } });
 $('#audEv').addEventListener('input', renderAudit);
 
+
+/* ---------- MCP ---------- */
+const keys = [
+  { id: 3, name: '내 노트북 Claude Code', prefix: 'wcmcp_Q7f2kd', created: '2026-10-13 10:12:40', used: '2026-10-13 11:21:05', revoked: false },
+  { id: 2, name: '운영 자동화 에이전트', prefix: 'wcmcp_x81LmA', created: '2026-10-10 14:03:22', used: '2026-10-13 09:00:01', revoked: false },
+  { id: 1, name: '테스트용', prefix: 'wcmcp_b0TzR4', created: '2026-10-02 18:40:11', used: null, revoked: true }
+];
+let issued = null;
+function exampleKey() { return issued ? issued.key : '<발급한 키>'; }
+function renderMcp() {
+  $('#issuedBox').hidden = !issued;
+  if (issued) { $('#issuedName').textContent = `‘${issued.name}’`; $('#issuedKey').textContent = issued.key; }
+  $('#cliEx').textContent = `claude mcp add --transport http webcron http://127.0.0.1:8080/mcp --header "Authorization: Bearer ${exampleKey()}"`;
+  $('#jsonEx').textContent = JSON.stringify({ mcpServers: { webcron: { type: 'http', url: 'http://127.0.0.1:8080/mcp', headers: { Authorization: `Bearer ${exampleKey()}` } } } }, null, 2);
+  $('#keyRows').innerHTML = keys.map((k) => `
+    <tr class="${k.revoked ? 'off' : ''}">
+      <td style="font-weight:600">${esc(k.name)}</td>
+      <td class="mono" style="font-size:13px">${k.prefix}…</td>
+      <td class="mono" style="font-size:13px;white-space:nowrap">${k.created}</td>
+      <td class="mono" style="font-size:13px;white-space:nowrap">${k.used ?? '사용 기록 없음'}</td>
+      <td>${k.revoked ? '<span class="badge b-interrupted">폐기됨</span>' : '<span class="badge b-success">사용 중</span>'}</td>
+      <td style="text-align:right">${k.revoked ? '' : `<button class="btn btn-danger" type="button" data-revoke="${k.id}">폐기</button>`}</td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">발급된 키가 없습니다.</td></tr>';
+}
+$('#keyForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('#keyName').value.trim();
+  $('#keyErr').hidden = !!name && name.length <= 100;
+  if (!name || name.length > 100) return;
+  // 시안용 가짜 키 (실제 키는 서버가 32바이트 난수로 만든다)
+  const rand = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'[b & 63]).join('');
+  const key = 'wcmcp_' + rand + 'DEMO';
+  const p = (n) => String(n).padStart(2, '0');
+  const d = new Date();
+  keys.unshift({ id: Date.now(), name, prefix: key.slice(0, 12), created: `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`, used: null, revoked: false });
+  issued = { name, key };
+  $('#keyName').value = '';
+  renderMcp();
+});
+document.addEventListener('click', (e) => {
+  const rv = e.target.closest('[data-revoke]');
+  if (rv) {
+    const k = keys.find((x) => x.id === +rv.dataset.revoke);
+    if (!confirm(`‘${k.name}’ 키를 폐기할까요? 이 키를 쓰는 MCP 클라이언트는 바로 연결이 끊깁니다.`)) return;
+    k.revoked = true;
+    if (issued && issued.key.startsWith(k.prefix)) issued = null;
+    renderMcp();
+  }
+  const cp = e.target.closest('[data-copy]');
+  if (cp) {
+    const v = { key: exampleKey(), cli: $('#cliEx').textContent, json: $('#jsonEx').textContent }[cp.dataset.copy];
+    navigator.clipboard?.writeText(v).then(() => { cp.textContent = '복사됨'; setTimeout(() => (cp.textContent = cp.dataset.copy === 'key' ? '키 복사' : '복사'), 1200); }, () => {});
+  }
+});
+
 /* ---------- 시작 ---------- */
-setType('webhook'); setMethod('POST'); renderJobs(); renderNext(); renderRuns(); renderAudit(); route();
+setType('webhook'); setMethod('POST'); renderJobs(); renderNext(); renderRuns(); renderAudit(); renderMcp(); route();
 </script>
 </body>
 </html>

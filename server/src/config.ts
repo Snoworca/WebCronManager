@@ -8,7 +8,6 @@ export interface Config {
   envPath: string;
   host: string;
   port: number;
-  username: string;
   passwordHash: string;
   sessionTtlMinutes: number;
   timezone: string;
@@ -25,8 +24,7 @@ export const ENV_TEMPLATE = `# WebCron 설정 파일
 WEBCRON_HOST=127.0.0.1
 WEBCRON_PORT=8080
 
-# 로그인 계정 (하나만 사용)
-WEBCRON_USERNAME=admin
+# 로그인 비밀번호 (아이디 없이 비밀번호로만 로그인한다)
 WEBCRON_PASSWORD=
 
 # 마지막 요청 후 세션이 만료되기까지의 시간(분)
@@ -79,12 +77,10 @@ export function loadConfig(envPath: string): { config: Config; passwordEncrypted
   const path = resolve(envPath);
   if (!existsSync(path)) {
     writeFileSync(path, ENV_TEMPLATE, { mode: 0o600 });
-    throw new ConfigError(`설정 파일이 없어 템플릿을 생성했습니다: ${path}\nWEBCRON_USERNAME 과 WEBCRON_PASSWORD 를 설정한 뒤 다시 시작하세요.`);
+    throw new ConfigError(`설정 파일이 없어 템플릿을 생성했습니다: ${path}\nWEBCRON_PASSWORD 를 설정한 뒤 다시 시작하세요.`);
   }
   const env = parseEnv(readFileSync(path, 'utf8')) as Record<string, string>;
 
-  const username = (env.WEBCRON_USERNAME ?? '').trim();
-  if (!username) throw new ConfigError('WEBCRON_USERNAME 이 비어 있습니다.');
   let password = env.WEBCRON_PASSWORD ?? '';
   if (!password) throw new ConfigError('WEBCRON_PASSWORD 가 비어 있습니다.');
 
@@ -109,7 +105,6 @@ export function loadConfig(envPath: string): { config: Config; passwordEncrypted
       envPath: path,
       host: (env.WEBCRON_HOST ?? '').trim() || '127.0.0.1',
       port,
-      username,
       passwordHash: password,
       sessionTtlMinutes,
       timezone,

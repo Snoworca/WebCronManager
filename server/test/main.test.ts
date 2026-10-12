@@ -49,12 +49,12 @@ test('OPS-WEBCRON-002, REL-WEBCRON-001 AC-1, SEC-WEBCRON-002 AC-5: 시작·종�
   try {
     const envPath = join(t.dir, '.env');
     const port = await freePort();
-    writeFileSync(envPath, `WEBCRON_PORT=${port}\nWEBCRON_USERNAME=admin\nWEBCRON_PASSWORD=pw-plain-1\nWEBCRON_TIMEZONE=UTC\n`);
+    writeFileSync(envPath, `WEBCRON_PORT=${port}\nWEBCRON_PASSWORD=pw-plain-1\nWEBCRON_TIMEZONE=UTC\n`);
     const base = `http://127.0.0.1:${port}`;
 
     const a = launch(envPath);
     await a.ready();
-    const login = await fetch(`${base}/api/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'pw-plain-1' }) });
+    const login = await fetch(`${base}/api/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'pw-plain-1' }) });
     assert.equal(login.status, 200);
     const cookie = login.headers.get('set-cookie')!.split(';')[0];
     const h = { 'content-type': 'application/json', cookie };
@@ -65,7 +65,7 @@ test('OPS-WEBCRON-002, REL-WEBCRON-001 AC-1, SEC-WEBCRON-002 AC-5: 시작·종�
 
     const b = launch(envPath);
     await b.ready();
-    const login2 = await fetch(`${base}/api/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'pw-plain-1' }) });
+    const login2 = await fetch(`${base}/api/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'pw-plain-1' }) });
     assert.equal(login2.status, 200, '해시로 바뀐 뒤에도 같은 비밀번호로 로그인된다');
     const cookie2 = login2.headers.get('set-cookie')!.split(';')[0];
     const jobs = await (await fetch(`${base}/api/jobs`, { headers: { cookie: cookie2 } })).json() as { items: { nextRunAt: string | null }[] };

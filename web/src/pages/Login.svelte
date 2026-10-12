@@ -4,7 +4,6 @@
   import { go, session } from '../lib/state.svelte.ts';
   import type { Me } from '../lib/types.ts';
 
-  let username = $state('');
   let password = $state('');
   let error = $state('');
   let locked = $state(false);
@@ -16,7 +15,7 @@
     error = '';
     locked = false;
     try {
-      await api('POST', '/api/login', { username, password });
+      await api('POST', '/api/login', { password });
       session.me = await api<Me>('GET', '/api/me');
       go('/jobs');
     } catch (err) {
@@ -38,14 +37,13 @@
     </div>
     <div>
       <h1>로그인</h1>
-      <p style="margin:4px 0 0;color:var(--muted)">관리자 계정으로 로그인하세요.</p>
+      <p style="margin:4px 0 0;color:var(--muted)">관리자 비밀번호를 입력하세요.</p>
     </div>
     {#if error}
       <div class="alert {locked ? 'alert-warn' : 'alert-bad'}" role="alert">{error}</div>
     {/if}
-    <label class="field">아이디<input class="input" autocomplete="username" bind:value={username} required /></label>
     <label class="field">비밀번호<input class="input" type="password" autocomplete="current-password" bind:value={password} required /></label>
-    <button class="btn btn-primary btn-lg" type="submit" disabled={busy || !username || !password}>{busy ? '확인 중…' : '로그인'}</button>
+    <button class="btn btn-primary btn-lg" type="submit" disabled={busy || !password}>{busy ? '확인 중…' : '로그인'}</button>
     <p class="hint" style="margin:0">로그인을 5회 연속 실패하면 5분 동안 시도가 차단됩니다.</p>
   </form>
 </div>

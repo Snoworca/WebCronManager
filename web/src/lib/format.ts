@@ -17,6 +17,8 @@ export const EVENT_LABEL: Record<string, string> = {
   'job.disable': '작업 비활성',
   'job.run_manual': '수동 실행',
   'run.cancel': '실행 중지',
+  'mcp_key.create': 'MCP 키 발급',
+  'mcp_key.revoke': 'MCP 키 폐기',
   'config.password_encrypted': '비밀번호 변환',
   'server.start': '서버 시작',
   'server.stop': '서버 종료',
@@ -82,7 +84,6 @@ export function auditSummary(a: AuditEntry): string {
     case 'job.update': return `필드 ${(d.changes as unknown[] | undefined)?.length ?? 0}개 변경`;
     case 'login.failure': return `연속 실패 ${d.failures ?? '?'}회`;
     case 'login.locked': return `5회 연속 실패 · ${d.lockMinutes ?? 5}분 차단`;
-    case 'login.success': return String(d.username ?? '');
     case 'job.run_manual':
     case 'run.cancel': return `실행 #${d.runId}`;
     case 'server.start': return `v${d.version} · 작업 ${d.jobs}개 · ${d.timezone}${d.interruptedRuns ? ` · 중단 ${d.interruptedRuns}건 마감` : ''}`;
@@ -91,8 +92,11 @@ export function auditSummary(a: AuditEntry): string {
     case 'job.create':
     case 'job.delete': {
       const j = (d.job ?? {}) as Record<string, string>;
-      return `${j.type === 'cli' ? 'CLI' : '웹훅'} · ${j.cron ?? ''}`;
+      const via = d.via === 'mcp' ? ` · MCP(${d.mcpKey})` : '';
+      return `${j.type === 'cli' ? 'CLI' : '웹훅'} · ${j.cron ?? ''}${via}`;
     }
+    case 'mcp_key.create':
+    case 'mcp_key.revoke': return `${d.name} (${d.prefix}…)`;
     default: return '';
   }
 }

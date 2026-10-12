@@ -86,6 +86,9 @@
             <dt>시각</dt><dd class="mono">{fullTime(selected.at)}</dd>
             <dt>대상</dt><dd>{selected.jobName ?? '—'}{selected.jobId ? ` (#${selected.jobId})` : ''}</dd>
             <dt>요청 IP</dt><dd class="mono">{selected.ip ?? '—'}</dd>
+            {#if selected.detail?.via}
+              <dt>경로</dt><dd>{selected.detail.via === 'mcp' ? `MCP · ${selected.detail.mcpKey}` : '웹 화면'}</dd>
+            {/if}
             <dt>요약</dt><dd>{auditSummary(selected) || '—'}</dd>
           </dl>
           {#if changes}
