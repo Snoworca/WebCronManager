@@ -62,8 +62,8 @@ test('FR-WEBCRON-004 AC-5: 작업 디렉터리와 환경 변수가 적용된다'
 function treeScript(pidFile: string): string {
   // 손자 프로세스를 띄우고 그 PID를 기록한 뒤 오래 대기한다.
   return `const {spawn}=require("child_process");const fs=require("fs");` +
-    `const c=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});` +
-    `fs.writeFileSync(${JSON.stringify(pidFile)},String(c.pid));setInterval(()=>{},1000);`;
+    `const c=spawn(process.execPath,["-e","setInterval(function(){},1000)"],{stdio:"ignore"});` +
+    `fs.writeFileSync(${JSON.stringify(pidFile)},String(c.pid));setInterval(function(){},1000);`;
 }
 
 test('FR-WEBCRON-006 AC-1, AC-2: 타임아웃이 지나면 프로세스 트리를 종료하고 timeout으로 기록한다', async () => {
@@ -81,7 +81,7 @@ test('FR-WEBCRON-006 AC-1, AC-2: 타임아웃이 지나면 프로세스 트리�
 });
 
 test('FR-WEBCRON-006 AC-4: 타임아웃 0은 시간 제한이 없다', async () => {
-  const r = await runCli({ command: nodeCmd('setTimeout(()=>{}, 1500)') }, { timeoutSec: 0, signal: never() });
+  const r = await runCli({ command: nodeCmd('setTimeout(function(){}, 1500)') }, { timeoutSec: 0, signal: never() });
   assert.equal(r.status, 'success');
 });
 

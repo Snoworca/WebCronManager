@@ -217,7 +217,7 @@ test('FR-WEBCRON-008 AC-1, AC-2, AC-5: 실행 이력은 50건씩 나뉘고 필�
 }));
 
 test('FR-WEBCRON-009 AC-3, AC-4: 실행 중인 작업을 중지하고 끝난 실행은 409를 준다', setup(async (c) => {
-  const job = (await api(c, 'POST', '/api/jobs', cliJob({ cli: { command: nodeCmd('setInterval(()=>{},1000)') } }))).json();
+  const job = (await api(c, 'POST', '/api/jobs', cliJob({ cli: { command: nodeCmd('setInterval(function(){},1000)') } }))).json();
   const runId = (await api(c, 'POST', `/api/jobs/${job.id}/run`)).json().runId;
   await sleep(150);
   assert.equal((await api(c, 'POST', `/api/runs/${runId}/cancel`)).statusCode, 200);

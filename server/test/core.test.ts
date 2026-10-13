@@ -49,7 +49,7 @@ test('FR-WEBCRON-001 AC-4: 작업을 지워도 실행 이력은 작업 이름과
 
 test('FR-WEBCRON-003 AC-1, AC-2: 같은 작업을 겹쳐 실행하면 각각 별도 실행으로 동시에 돈다', withStore(async (store) => {
   const runner = new Runner(store);
-  const job = store.createJob(cliJob({}, nodeCmd('setTimeout(()=>{}, 800)')));
+  const job = store.createJob(cliJob({}, nodeCmd('setTimeout(function(){}, 800)')));
   const a = runner.start(job, 'schedule')!;
   const b = runner.start(job, 'schedule')!;
   assert.notEqual(a, b);
@@ -75,7 +75,7 @@ test('REL-WEBCRON-002 AC-1, AC-2: 시작에 실패한 작업이 있어도 다른
 
 test('FR-WEBCRON-009 AC-3: 끝난 실행은 중지할 수 없다', withStore(async (store) => {
   const runner = new Runner(store);
-  const job = store.createJob(cliJob({}, nodeCmd('setInterval(()=>{},1000)')));
+  const job = store.createJob(cliJob({}, nodeCmd('setInterval(function(){},1000)')));
   const id = runner.start(job, 'manual')!;
   await sleep(150);
   assert.equal(runner.cancel(id), true);
@@ -96,7 +96,7 @@ test('REL-WEBCRON-001 AC-2: 이전에 running으로 남은 실행은 interrupted
 
 test('OPS-WEBCRON-002: 종료 시 실행 중인 작업을 interrupted로 마감하고 새 실행을 받지 않는다', withStore(async (store) => {
   const runner = new Runner(store);
-  const job = store.createJob(cliJob({}, nodeCmd('setInterval(()=>{},1000)')));
+  const job = store.createJob(cliJob({}, nodeCmd('setInterval(function(){},1000)')));
   const id = runner.start(job, 'schedule')!;
   await sleep(100);
   await runner.shutdown();
