@@ -50,9 +50,10 @@ test('FR-WEBCRON-004 AC-4: 작업 디렉터리가 없으면 failure와 오류 �
 test('FR-WEBCRON-004 AC-5: 작업 디렉터리와 환경 변수가 적용된다', async () => {
   const t = tempDir();
   try {
-    const r = await runCli({ command: nodeCmd('console.log(process.cwd() + "|" + process.env.WC_TEST)'), cwd: t.dir, env: { WC_TEST: 'val-1' } }, { timeoutSec: 0, signal: never() });
-    assert.equal(r.status, 'success');
-    const [cwd, v] = r.stdout.trim().split('|');
+    // 구분자로 셸 특수문자(| & < >)를 쓰지 않는다. cmd.exe 는 \" 를 이스케이프로 보지 않아 따옴표 밖으로 해석한다.
+    const r = await runCli({ command: nodeCmd('console.log(process.cwd() + String.fromCharCode(44) + process.env.WC_TEST)'), cwd: t.dir, env: { WC_TEST: 'val-1' } }, { timeoutSec: 0, signal: never() });
+    assert.equal(r.status, 'success', r.stderr);
+    const [cwd, v] = r.stdout.trim().split(',');
     assert.equal(cwd.toLowerCase(), t.dir.toLowerCase());
     assert.equal(v, 'val-1');
   } finally { t.cleanup(); }

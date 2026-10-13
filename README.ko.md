@@ -29,6 +29,8 @@ npm run build      # 웹 화면(Svelte 5)을 dist/web 에 빌드합니다
 npm start          # node server/src/main.ts
 ```
 
+시스템에 `NODE_ENV=production`이 설정되어 있으면 npm이 빌드 도구(vite, svelte)를 설치하지 않습니다. 이때는 `npm run build` 전에 `npm install --include=dev`(또는 `npm ci --include=dev`)로 설치하세요.
+
 처음 실행하면 `.env` 파일이 없으므로 서버가 템플릿을 만들고 종료합니다. `.env`에 `WEBCRON_PASSWORD`를 정한 뒤 다시 실행하세요. 로그인할 때는 아이디 없이 이 비밀번호만 입력합니다.
 
 ```dotenv

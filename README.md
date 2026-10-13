@@ -29,6 +29,8 @@ npm run build      # builds the web UI (Svelte 5) into dist/web
 npm start          # node server/src/main.ts
 ```
 
+If `NODE_ENV=production` is set on your system, npm skips the build tools (vite, svelte). In that case install with `npm install --include=dev` (or `npm ci --include=dev`) before you run `npm run build`.
+
 On the first run there is no `.env` file, so the server creates a template and stops. Set `WEBCRON_PASSWORD` in `.env` and start the server again. To sign in, enter this password only. There is no user name.
 
 ```dotenv
