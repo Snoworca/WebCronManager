@@ -1,6 +1,7 @@
 // FR-WEBCRON-003: 병렬 실행, FR-WEBCRON-009: 중지, REL-WEBCRON-002: 실패 격리
 import type { Store, Trigger } from './db.ts';
 import { runCli } from './exec/cli.ts';
+import { ts } from './i18n.ts';
 import type { ExecResult } from './exec/types.ts';
 import { runWebhook } from './exec/webhook.ts';
 import type { Job } from './jobs.ts';
@@ -27,10 +28,10 @@ export class Runner {
     const ctl = new AbortController();
     const entry: Active = { ctl, shutdown: false, done: Promise.resolve() };
     entry.done = this.execute(job, ctl.signal)
-      .catch((e: unknown): ExecResult => ({ status: 'failure', error: `실행 중 오류: ${(e as Error)?.message ?? String(e)}` }))
+      .catch((e: unknown): ExecResult => ({ status: 'failure', error: ts('exec.error', { error: (e as Error)?.message ?? String(e) }) }))
       .then((result) => {
-        if (entry.shutdown) result = { ...result, status: 'interrupted', error: '서버가 종료되어 실행이 중단되었습니다.' };
-        try { this.store.finishRun(runId, result); } catch (e) { console.error(`[webcron] 실행 결과 저장 실패 (run ${runId}):`, e); }
+        if (entry.shutdown) result = { ...result, status: 'interrupted', error: ts('exec.interrupted') };
+        try { this.store.finishRun(runId, result); } catch (e) { console.error(`[webcron] failed to save run ${runId}:`, e); }
       })
       .finally(() => this.active.delete(runId));
     this.active.set(runId, entry);
@@ -40,10 +41,10 @@ export class Runner {
   private execute(job: Job, signal: AbortSignal): Promise<ExecResult> {
     const opts = { timeoutSec: job.timeoutSec, signal };
     if (job.type === 'cli') {
-      if (!job.cli) return Promise.resolve({ status: 'failure', error: 'CLI 설정이 없습니다.' });
+      if (!job.cli) return Promise.resolve({ status: 'failure', error: ts('exec.noCli') });
       return runCli(job.cli, opts);
     }
-    if (!job.webhook) return Promise.resolve({ status: 'failure', error: '웹훅 설정이 없습니다.' });
+    if (!job.webhook) return Promise.resolve({ status: 'failure', error: ts('exec.noWebhook') });
     return runWebhook(job.webhook, opts);
   }
 

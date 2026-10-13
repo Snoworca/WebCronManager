@@ -9,6 +9,7 @@ import { cronError, nextRuns } from './cron.ts';
 import type { Store } from './db.ts';
 import type { RunStatus } from './exec/types.ts';
 import { diffJobs, flattenJob, validateJob, type FieldErrors, type Job } from './jobs.ts';
+import { pickLocale, t, type Locale, type MsgKey } from './i18n.ts';
 import { registerMcp } from './mcp.ts';
 import { generateKey } from './mcpkeys.ts';
 import { verifyPassword } from './password.ts';
@@ -28,6 +29,10 @@ export interface AppDeps {
 export const COOKIE = 'wc_session';
 
 export type JobView = Job & { nextRunAt: string | null; lastRun: unknown; runningCount: number };
+/** IR-WEBCRON-003: 요청의 Accept-Language 로 메시지 언어를 정한다. */
+export const reqLocale = (req: FastifyRequest): Locale => pickLocale(req.headers['accept-language']);
+const msg = (req: FastifyRequest, key: MsgKey, params?: Record<string, string | number>) => t(reqLocale(req), key, params);
+
 export interface Actor { req: FastifyRequest; via: 'web' | 'mcp'; mcpKey?: string }
 export interface JobActions {
   listJobs(): JobView[];
@@ -54,13 +59,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // 빈 본문의 JSON 요청(예: 본문 없는 DELETE)도 받아들인다.
   app.removeContentTypeParser('application/json');
-  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
     const s = String(body);
     if (s.trim() === '') { done(null, undefined); return; }
     try {
       done(null, JSON.parse(s));
     } catch {
-      done(Object.assign(new Error('JSON 본문을 해석할 수 없습니다.'), { statusCode: 400 }), undefined);
+      done(Object.assign(new Error(msg(req, 'api.badJson')), { statusCode: 400 }), undefined);
     }
   });
 
@@ -82,7 +87,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       return store.listJobs().map((j) => jobView(j, summary));
     },
     createJob: (body, actor) => {
-      const v = validateJob(body);
+      const v = validateJob(body, reqLocale(actor.req));
       if (v.errors) return { errors: v.errors };
       const job = store.createJob(v.value, now());
       scheduler.sync(job);
@@ -103,12 +108,12 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.addHook('onRequest', async (req, reply) => {
     if (!req.url.startsWith('/api/')) return;
     if (req.url !== '/api/login' && !sessions.touch(req.cookies[COOKIE])) {
-      return reply.code(401).send({ message: '로그인이 필요합니다.' });
+      return reply.code(401).send({ message: msg(req, 'api.loginRequired') });
     }
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       const ct = String(req.headers['content-type'] ?? '');
       if (!ct.toLowerCase().startsWith('application/json')) {
-        return reply.code(415).send({ message: 'Content-Type: application/json 요청만 받습니다.' });
+        return reply.code(415).send({ message: msg(req, 'api.jsonOnly') });
       }
     }
   });
@@ -116,7 +121,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.setErrorHandler((err: Error & { statusCode?: number }, req, reply) => {
     const code = err.statusCode && err.statusCode < 500 ? err.statusCode : 500;
     if (code === 500) req.log.error(err);
-    reply.code(code).send({ message: code === 500 ? '서버 오류가 발생했습니다.' : err.message });
+    reply.code(code).send({ message: code === 500 ? msg(req, 'api.serverError') : err.message });
   });
 
   // ---------- 인증 ----------
@@ -125,7 +130,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const left = limiter.lockedFor(ip);
     if (left > 0) {
       reply.header('retry-after', String(left));
-      return reply.code(429).send({ message: `로그인을 5회 연속 실패했습니다. ${left}초 뒤에 다시 시도하세요.`, retryAfterSec: left });
+      return reply.code(429).send({ message: msg(req, 'api.locked', { sec: left }), retryAfterSec: left });
     }
     const b = (req.body ?? {}) as { password?: unknown };
     const pwOk = typeof b.password === 'string' && b.password !== '' && (await verifyPassword(b.password, config.passwordHash));
@@ -139,7 +144,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const locked = limiter.fail(ip);
     audit('login.failure', req, null, { failures: limiter.failures(ip) });
     if (locked) audit('login.locked', req, null, { lockMinutes: 5 });
-    return reply.code(401).send({ message: '비밀번호가 올바르지 않습니다.' });
+    return reply.code(401).send({ message: msg(req, 'api.badPassword') });
   });
 
   app.post('/api/logout', async (req, reply) => {
@@ -163,7 +168,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const findJob = (req: FastifyRequest, reply: FastifyReply): Job | null => {
     const id = int((req.params as { id: string }).id);
     const job = id === undefined ? null : store.getJob(id);
-    if (!job) reply.code(404).send({ message: '작업을 찾을 수 없습니다.' });
+    if (!job) reply.code(404).send({ message: msg(req, 'api.jobNotFound') });
     return job;
   };
 
@@ -176,15 +181,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.post('/api/jobs', async (req, reply) => {
     const r = actions.createJob(req.body, { req, via: 'web' });
-    if (r.errors) return reply.code(400).send({ message: '입력값을 확인하세요.', errors: r.errors });
+    if (r.errors) return reply.code(400).send({ message: msg(req, 'api.checkInput'), errors: r.errors });
     return reply.code(201).send(r.job);
   });
 
   app.put('/api/jobs/:id', async (req, reply) => {
     const before = findJob(req, reply);
     if (!before) return reply;
-    const v = validateJob(req.body);
-    if (v.errors) return reply.code(400).send({ message: '입력값을 확인하세요.', errors: v.errors });
+    const v = validateJob(req.body, reqLocale(req));
+    if (v.errors) return reply.code(400).send({ message: msg(req, 'api.checkInput'), errors: v.errors });
     const after = store.updateJob(before.id, v.value, now())!;
     scheduler.sync(after);
     const changes = diffJobs(before, after).filter((c) => c.field !== 'enabled');
@@ -197,7 +202,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const job = findJob(req, reply);
     if (!job) return reply;
     const enabled = (req.body as { enabled?: unknown })?.enabled;
-    if (typeof enabled !== 'boolean') return reply.code(400).send({ message: '입력값을 확인하세요.', errors: { enabled: 'true 또는 false 여야 합니다.' } });
+    if (typeof enabled !== 'boolean') return reply.code(400).send({ message: msg(req, 'api.checkInput'), errors: { enabled: msg(req, 'api.enabledBool') } });
     if (job.enabled !== enabled) {
       const updated = store.updateJob(job.id, { ...job, enabled }, now())!;
       scheduler.sync(updated);
@@ -218,14 +223,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const job = findJob(req, reply);
     if (!job) return reply;
     const runId = runner.start(job, 'manual');
-    if (runId === null) return reply.code(503).send({ message: '서버가 종료 중입니다.' });
+    if (runId === null) return reply.code(503).send({ message: msg(req, 'api.shuttingDown') });
     audit('job.run_manual', req, job, { runId });
     return reply.code(202).send({ runId });
   });
 
   app.post('/api/cron/preview', async (req, reply) => {
     const cron = String((req.body as { cron?: unknown })?.cron ?? '');
-    const err = cronError(cron);
+    const err = cronError(cron, reqLocale(req));
     if (err) return reply.code(400).send({ message: err, errors: { cron: err } });
     return { timezone: config.timezone, next: nextRuns(cron, config.timezone, 5).map((d) => d.toISOString()) };
   });
@@ -240,14 +245,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/runs/:id', async (req, reply) => {
     const id = int((req.params as { id: string }).id);
     const run = id === undefined ? null : store.getRun(id);
-    return run ?? reply.code(404).send({ message: '실행 기록을 찾을 수 없습니다.' });
+    return run ?? reply.code(404).send({ message: msg(req, 'api.runNotFound') });
   });
 
   app.post('/api/runs/:id/cancel', async (req, reply) => {
     const id = int((req.params as { id: string }).id);
     const run = id === undefined ? null : store.getRun(id);
-    if (!run) return reply.code(404).send({ message: '실행 기록을 찾을 수 없습니다.' });
-    if (!runner.cancel(run.id)) return reply.code(409).send({ message: '이미 끝난 실행입니다.' });
+    if (!run) return reply.code(404).send({ message: msg(req, 'api.runNotFound') });
+    if (!runner.cancel(run.id)) return reply.code(409).send({ message: msg(req, 'api.runFinished') });
     audit('run.cancel', req, { id: run.jobId, name: run.jobName }, { runId: run.id });
     return { ok: true };
   });
@@ -265,7 +270,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const raw = (req.body as { name?: unknown })?.name;
     const name = typeof raw === 'string' ? raw.trim() : '';
     if (!name || name.length > 100) {
-      return reply.code(400).send({ message: '입력값을 확인하세요.', errors: { name: '이름은 1~100자로 입력하세요.' } });
+      return reply.code(400).send({ message: msg(req, 'api.checkInput'), errors: { name: msg(req, 'api.keyName') } });
     }
     const { key, keyHash, prefix } = generateKey();
     const item = store.createMcpKey({ name, prefix, keyHash, at: now() });
@@ -276,7 +281,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.delete('/api/mcp-keys/:id', async (req, reply) => {
     const id = int((req.params as { id: string }).id);
     const item = id === undefined ? null : store.getMcpKey(id);
-    if (!item) return reply.code(404).send({ message: 'MCP 키를 찾을 수 없습니다.' });
+    if (!item) return reply.code(404).send({ message: msg(req, 'api.keyNotFound') });
     if (!item.revokedAt) {
       store.revokeMcpKey(item.id, now());
       audit('mcp_key.revoke', req, null, { keyId: item.id, name: item.name, prefix: item.prefix });
@@ -296,10 +301,10 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       // 확장자가 있는 경로(없는 정적 파일)는 index.html 로 대신하지 않는다.
       const isPage = req.method === 'GET' && !path.startsWith('/api/') && path !== '/mcp' && !/\.[a-z0-9]+$/i.test(path);
       if (isPage) return reply.sendFile('index.html');
-      return reply.code(404).send({ message: '찾을 수 없습니다.' });
+      return reply.code(404).send({ message: msg(req, 'api.notFound') });
     });
   } else {
-    app.setNotFoundHandler((_req, reply) => reply.code(404).send({ message: '찾을 수 없습니다.' }));
+    app.setNotFoundHandler((req, reply) => reply.code(404).send({ message: msg(req, 'api.notFound') }));
   }
 
   return app;

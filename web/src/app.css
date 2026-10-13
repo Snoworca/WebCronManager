@@ -138,4 +138,6 @@ pre.out{margin:0;background:var(--code-bg);color:var(--code-text);border-radius:
 .tools{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;margin:0}
 .tools dt{font-family:var(--mono);font-size:13px;color:var(--accent)}
 .tools dd{margin:0}
+.seg-sm{padding:2px;border-radius:8px}
+.seg-sm button{min-height:30px;padding:0 10px;font-size:13px;border-radius:6px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--code-bg);color:#fff;padding:10px 16px;border-radius:10px;z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.2);max-width:calc(100vw - 32px)}

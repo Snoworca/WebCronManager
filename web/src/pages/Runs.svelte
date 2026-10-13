@@ -4,7 +4,8 @@
   import Icon from '../components/Icon.svelte';
   import Pager from '../components/Pager.svelte';
   import { api, qs } from '../lib/api.ts';
-  import { dateEndExclusive, dateStart, fullTime, runCode, runDuration, shortTime } from '../lib/format.ts';
+  import { dateEndExclusive, dateStart, fullTime, runCode, runDuration, shortTime, statusLabel, triggerLabel } from '../lib/format.ts';
+  import { t } from '../lib/i18n.svelte.ts';
   import { notify, route, session } from '../lib/state.svelte.ts';
   import type { Job, Page, Run } from '../lib/types.ts';
 
@@ -54,22 +55,22 @@
   onMount(() => {
     api<{ items: Job[] }>('GET', '/api/jobs').then((r) => (jobs = r.items)).catch(() => {});
     // FR-WEBCRON-008 AC-4: 실행 중인 항목은 5초 이내에 결과가 반영된다.
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       now = Date.now();
       loadList();
       if (detail?.status === 'running') loadDetail();
     }, 3000);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   });
 
   function resetPage() { pageNo = 1; }
 
   async function stop() {
-    if (!detail || !confirm(`‘${detail.jobName}’ 실행 #${detail.id}을(를) 중지할까요?`)) return;
+    if (!detail || !confirm(t('runs.confirmStop', { name: detail.jobName, id: detail.id }))) return;
     stopping = true;
     try {
       await api('POST', `/api/runs/${detail.id}/cancel`);
-      notify('실행을 중지했습니다.');
+      notify(t('runs.stopped'));
       setTimeout(() => { loadDetail(); loadList(); }, 400);
     } catch (e) {
       notify((e as Error).message);
@@ -83,32 +84,33 @@
 <main class="wrap">
   <div class="head">
     <div>
-      <h1>실행 이력</h1>
-      <p>최근 {session.me?.logRetentionDays ?? 30}일 실행 기록입니다. 보관 기간이 지난 기록은 자동으로 정리됩니다.</p>
+      <h1>{t('runs.title')}</h1>
+      <p>{t('runs.subtitle', { days: session.me?.logRetentionDays ?? 30 })}</p>
     </div>
   </div>
   <div class="split">
-    <section class="card main-col" aria-label="실행 목록">
+    <section class="card main-col" aria-label={t('runs.listAria')}>
       <div class="filters">
-        <label class="field" style="flex:1 1 200px">작업
+        <label class="field" style="flex:1 1 200px">{t('runs.job')}
           <select class="input" bind:value={jobId} onchange={resetPage}>
-            <option value="">전체 작업</option>
+            <option value="">{t('runs.allJobs')}</option>
             {#each jobs as j (j.id)}<option value={String(j.id)}>{j.name}</option>{/each}
           </select>
         </label>
-        <label class="field" style="flex:0 1 150px">결과
+        <label class="field" style="flex:0 1 150px">{t('runs.result')}
           <select class="input" bind:value={status} onchange={resetPage}>
-            <option value="">전체</option><option value="success">성공</option><option value="failure">실패</option>
-            <option value="timeout">시간 초과</option><option value="running">실행 중</option>
-            <option value="canceled">중지됨</option><option value="interrupted">중단됨</option>
+            <option value="">{t('common.all')}</option>
+            {#each ['success', 'failure', 'timeout', 'running', 'canceled', 'interrupted'] as const as st (st)}
+              <option value={st}>{statusLabel(st)}</option>
+            {/each}
           </select>
         </label>
-        <label class="field" style="flex:0 1 160px">시작일<input class="input" type="date" bind:value={from} onchange={resetPage} /></label>
-        <label class="field" style="flex:0 1 160px">종료일<input class="input" type="date" bind:value={to} onchange={resetPage} /></label>
+        <label class="field" style="flex:0 1 160px">{t('runs.from')}<input class="input" type="date" bind:value={from} onchange={resetPage} /></label>
+        <label class="field" style="flex:0 1 160px">{t('runs.to')}<input class="input" type="date" bind:value={to} onchange={resetPage} /></label>
       </div>
       <div class="tbl-box">
         <table style="min-width:760px">
-          <thead><tr><th>결과</th><th>작업</th><th>실행 방식</th><th>시작</th><th>소요</th><th>코드</th></tr></thead>
+          <thead><tr><th>{t('runs.colResult')}</th><th>{t('runs.colJob')}</th><th>{t('runs.colTrigger')}</th><th>{t('runs.colStart')}</th><th>{t('runs.colDuration')}</th><th>{t('runs.colCode')}</th></tr></thead>
           <tbody>
             {#each page.items as r (r.id)}
               <tr class:sel={r.id === selectedId}>
@@ -117,13 +119,13 @@
                   <button type="button" class="linkbtn" onclick={() => (selectedId = r.id)}>{r.jobName}</button>
                   <span class="t-sub mono" style="font-size:12px">#{r.id}</span>
                 </td>
-                <td><span class="type"><Icon name={r.jobType} />{r.trigger === 'manual' ? '수동' : '스케줄'}</span></td>
+                <td><span class="type"><Icon name={r.jobType} />{triggerLabel(r.trigger)}</span></td>
                 <td class="mono" style="font-size:13px;white-space:nowrap">{shortTime(r.startedAt)}</td>
                 <td style="white-space:nowrap">{runDuration(r, now)}</td>
                 <td class="mono" style="font-size:13px;white-space:nowrap">{runCode(r)}</td>
               </tr>
             {:else}
-              <tr><td colspan="6" class="empty">{loaded ? '조건에 맞는 실행 기록이 없습니다.' : '불러오는 중…'}</td></tr>
+              <tr><td colspan="6" class="empty">{loaded ? t('runs.empty') : t('common.loading')}</td></tr>
             {/each}
           </tbody>
         </table>
@@ -131,44 +133,44 @@
       <Pager page={page.page} pageSize={page.pageSize} total={page.total} onpage={(p) => (pageNo = p)} />
     </section>
 
-    <aside class="card side-col" aria-label="실행 상세">
+    <aside class="card side-col" aria-label={t('runs.detailAria')}>
       {#if detail}
         <div class="card-h"><h2>{detail.jobName}</h2><Badge status={detail.status} /></div>
         <div class="card-b">
           <dl class="meta">
-            <dt>실행 ID</dt><dd class="mono">#{detail.id}</dd>
-            <dt>실행 방식</dt><dd>{detail.trigger === 'manual' ? '수동' : '스케줄'}</dd>
-            <dt>시작</dt><dd class="mono">{fullTime(detail.startedAt)}</dd>
-            <dt>종료</dt><dd class="mono">{fullTime(detail.finishedAt)}</dd>
-            <dt>소요</dt><dd>{runDuration(detail, now)}</dd>
+            <dt>{t('runs.id')}</dt><dd class="mono">#{detail.id}</dd>
+            <dt>{t('runs.trigger')}</dt><dd>{triggerLabel(detail.trigger)}</dd>
+            <dt>{t('runs.start')}</dt><dd class="mono">{fullTime(detail.startedAt)}</dd>
+            <dt>{t('runs.end')}</dt><dd class="mono">{fullTime(detail.finishedAt)}</dd>
+            <dt>{t('runs.duration')}</dt><dd>{runDuration(detail, now)}</dd>
             {#if detail.jobType === 'cli'}
-              <dt>종료 코드</dt><dd class="mono">{detail.exitCode ?? '—'}</dd>
+              <dt>{t('runs.exitCode')}</dt><dd class="mono">{detail.exitCode ?? '—'}</dd>
             {:else}
-              <dt>최종 URL</dt><dd class="mono">{detail.finalUrl ?? '—'}</dd>
-              <dt>상태 코드</dt><dd class="mono">{detail.httpStatus ?? '—'}</dd>
-              <dt>리다이렉트</dt><dd>{detail.redirects ?? 0}회</dd>
-              <dt>시도</dt><dd>{detail.attempts ?? '—'}회</dd>
+              <dt>{t('runs.finalUrl')}</dt><dd class="mono">{detail.finalUrl ?? '—'}</dd>
+              <dt>{t('runs.httpStatus')}</dt><dd class="mono">{detail.httpStatus ?? '—'}</dd>
+              <dt>{t('runs.redirects')}</dt><dd>{t('runs.times', { n: detail.redirects ?? 0 })}</dd>
+              <dt>{t('runs.attempts')}</dt><dd>{detail.attempts === null ? '—' : t('runs.times', { n: detail.attempts })}</dd>
             {/if}
-            {#if detail.error}<dt>오류</dt><dd style="color:var(--bad)">{detail.error}</dd>{/if}
+            {#if detail.error}<dt>{t('runs.error')}</dt><dd style="color:var(--bad)">{detail.error}</dd>{/if}
           </dl>
           {#if detail.status === 'running'}
             <div style="margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px" role="status">
-              <span class="hint" style="font-size:13px">끝나면 결과가 자동으로 갱신됩니다.</span>
-              <button type="button" class="btn btn-danger" onclick={stop} disabled={stopping}><Icon name="stop" size={14} />실행 중지</button>
+              <span class="hint" style="font-size:13px">{t('runs.autoRefresh')}</span>
+              <button type="button" class="btn btn-danger" onclick={stop} disabled={stopping}><Icon name="stop" size={14} />{t('runs.stop')}</button>
             </div>
           {/if}
           {#if detail.jobType === 'cli'}
-            <div class="out-h"><span>stdout</span><span class="hint">최대 64KB 저장</span></div>
-            <pre class="out">{detail.stdout || '(출력 없음)'}</pre>
+            <div class="out-h"><span>stdout</span><span class="hint">{t('runs.outputLimit')}</span></div>
+            <pre class="out">{detail.stdout || t('runs.noOutput')}</pre>
             <div class="out-h"><span>stderr</span></div>
-            <pre class="out">{detail.stderr || '(출력 없음)'}</pre>
+            <pre class="out">{detail.stderr || t('runs.noOutput')}</pre>
           {:else}
-            <div class="out-h"><span>응답 본문</span><span class="hint">최대 64KB 저장</span></div>
-            <pre class="out">{detail.responseBody || '(본문 없음)'}</pre>
+            <div class="out-h"><span>{t('runs.responseBody')}</span><span class="hint">{t('runs.outputLimit')}</span></div>
+            <pre class="out">{detail.responseBody || t('runs.noBody')}</pre>
           {/if}
         </div>
       {:else}
-        <div class="card-b" style="color:var(--muted)">목록에서 실행을 선택하면 상세 내용이 나타납니다.</div>
+        <div class="card-b" style="color:var(--muted)">{t('runs.selectHint')}</div>
       {/if}
     </aside>
   </div>

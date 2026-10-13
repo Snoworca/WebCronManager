@@ -61,10 +61,10 @@ async function issueKey(c: Ctx, name = 'claude'): Promise<{ key: string; id: num
   return { key: r.json.key, id: r.json.item.id };
 }
 
-async function connect(c: Ctx, key: string): Promise<Client> {
+async function connect(c: Ctx, key: string, lang?: string): Promise<Client> {
   const client = new Client({ name: 'test', version: '0.0.0' });
   await client.connect(new StreamableHTTPClientTransport(new URL(`${c.base}/mcp`), {
-    requestInit: { headers: { authorization: `Bearer ${key}` } },
+    requestInit: { headers: { authorization: `Bearer ${key}`, ...(lang ? { 'accept-language': lang } : {}) } },
   }));
   return client;
 }
@@ -202,4 +202,19 @@ test('FR-WEBCRON-011 AC-1~AC-5: MCP로 작업을 만들고 조회하고 지운�
     assert.equal(viaMcp.length, 3);
     for (const a of viaMcp) assert.equal((a.detail as { mcpKey?: string }).mcpKey, 'agent-key');
   } finally { await client.close(); }
+}));
+
+test('IR-WEBCRON-003 AC-3: MCP 도구 설명은 영어이고 결과 메시지는 Accept-Language 를 따른다', setup(async (c) => {
+  const { key } = await issueKey(c);
+  const en = await connect(c, key);
+  const ko = await connect(c, key, 'ko-KR');
+  try {
+    const tools = (await en.listTools()).tools;
+    assert.ok(!/[가-힣]/.test(JSON.stringify(tools)), '도구 설명에 한글이 없다');
+    const badArgs = { name: '', cron: 'x', type: 'cli', cli: { command: 'echo' } };
+    assert.match(text(await en.callTool({ name: 'create_job', arguments: badArgs })), /Could not create the job/);
+    assert.match(text(await ko.callTool({ name: 'create_job', arguments: badArgs })), /작업을 만들지 못했습니다/);
+    assert.match(text(await en.callTool({ name: 'delete_job', arguments: { id: 424242 } })), /Job not found/);
+    assert.match(text(await ko.callTool({ name: 'delete_job', arguments: { id: 424242 } })), /작업을 찾을 수 없습니다/);
+  } finally { await en.close(); await ko.close(); }
 }));

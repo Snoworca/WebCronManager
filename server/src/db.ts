@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import type { ExecResult, RunStatus } from './exec/types.ts';
+import { ts } from './i18n.ts';
 import type { Job, JobInput, JobType } from './jobs.ts';
 
 export type Trigger = 'schedule' | 'manual';
@@ -258,8 +259,8 @@ export class Store {
 
   /** REL-WEBCRON-001 AC-2 */
   markInterrupted(now = Date.now()): number {
-    const res = this.db.prepare(`UPDATE runs SET status = 'interrupted', finished_at = ?,
-      error = '서버가 종료되어 실행이 중단되었습니다.' WHERE status = 'running'`).run(now);
+    const res = this.db.prepare(`UPDATE runs SET status = 'interrupted', finished_at = ?, error = ?
+      WHERE status = 'running'`).run(now, ts('exec.interrupted'));
     return Number(res.changes);
   }
 

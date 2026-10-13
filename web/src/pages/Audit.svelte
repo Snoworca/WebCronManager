@@ -1,7 +1,8 @@
 <script lang="ts">
   import Pager from '../components/Pager.svelte';
   import { api, qs } from '../lib/api.ts';
-  import { auditSummary, dateEndExclusive, dateStart, EVENT_LABEL, fullTime, shortTime } from '../lib/format.ts';
+  import { auditSummary, dateEndExclusive, dateStart, EVENTS, eventLabel, fullTime, shortTime } from '../lib/format.ts';
+  import { t } from '../lib/i18n.svelte.ts';
   import { notify, session } from '../lib/state.svelte.ts';
   import type { AuditEntry, Page } from '../lib/types.ts';
 
@@ -38,31 +39,31 @@
 <main class="wrap">
   <div class="head">
     <div>
-      <h1>감사 로그</h1>
-      <p>감사 로그는 수정하거나 삭제할 수 없습니다. 보관 기간({session.me?.logRetentionDays ?? 30}일)이 지나면 자동으로 정리됩니다.</p>
+      <h1>{t('audit.title')}</h1>
+      <p>{t('audit.subtitle', { days: session.me?.logRetentionDays ?? 30 })}</p>
     </div>
   </div>
   <div class="split">
-    <section class="card main-col" aria-label="감사 로그 목록">
+    <section class="card main-col" aria-label={t('audit.listAria')}>
       <div class="filters">
-        <label class="field" style="flex:1 1 220px">이벤트
+        <label class="field" style="flex:1 1 220px">{t('audit.event')}
           <select class="input" bind:value={event} onchange={resetPage}>
-            <option value="">전체 이벤트</option>
-            {#each Object.entries(EVENT_LABEL) as [v, l] (v)}<option value={v}>{l} ({v})</option>{/each}
+            <option value="">{t('audit.allEvents')}</option>
+            {#each EVENTS as v (v)}<option value={v}>{eventLabel(v)} ({v})</option>{/each}
           </select>
         </label>
-        <label class="field" style="flex:0 1 160px">시작일<input class="input" type="date" bind:value={from} onchange={resetPage} /></label>
-        <label class="field" style="flex:0 1 160px">종료일<input class="input" type="date" bind:value={to} onchange={resetPage} /></label>
+        <label class="field" style="flex:0 1 160px">{t('runs.from')}<input class="input" type="date" bind:value={from} onchange={resetPage} /></label>
+        <label class="field" style="flex:0 1 160px">{t('runs.to')}<input class="input" type="date" bind:value={to} onchange={resetPage} /></label>
       </div>
       <div class="tbl-box">
         <table style="min-width:760px">
-          <thead><tr><th>시각</th><th>이벤트</th><th>대상</th><th>요청 IP</th><th>요약</th></tr></thead>
+          <thead><tr><th>{t('audit.colTime')}</th><th>{t('audit.colEvent')}</th><th>{t('audit.colTarget')}</th><th>{t('audit.colIp')}</th><th>{t('audit.colSummary')}</th></tr></thead>
           <tbody>
             {#each page.items as a (a.id)}
               <tr class:sel={a.id === selectedId}>
                 <td class="mono" style="font-size:13px;white-space:nowrap">{shortTime(a.at)}</td>
                 <td>
-                  <button type="button" class="linkbtn" onclick={() => (selectedId = a.id)}>{EVENT_LABEL[a.event] ?? a.event}</button>
+                  <button type="button" class="linkbtn" onclick={() => (selectedId = a.id)}>{eventLabel(a.event)}</button>
                   <span class="t-sub"><span class="ev">{a.event}</span></span>
                 </td>
                 <td>{a.jobName ?? '—'}</td>
@@ -70,7 +71,7 @@
                 <td style="color:var(--text-2)">{auditSummary(a)}</td>
               </tr>
             {:else}
-              <tr><td colspan="5" class="empty">{loaded ? '조건에 맞는 기록이 없습니다.' : '불러오는 중…'}</td></tr>
+              <tr><td colspan="5" class="empty">{loaded ? t('audit.empty') : t('common.loading')}</td></tr>
             {/each}
           </tbody>
         </table>
@@ -78,24 +79,24 @@
       <Pager page={page.page} pageSize={page.pageSize} total={page.total} onpage={(p) => (pageNo = p)} />
     </section>
 
-    <aside class="card side-col" aria-label="감사 로그 상세">
+    <aside class="card side-col" aria-label={t('audit.detailAria')}>
       {#if selected}
-        <div class="card-h"><h2>{EVENT_LABEL[selected.event] ?? selected.event}</h2><span class="ev">{selected.event}</span></div>
+        <div class="card-h"><h2>{eventLabel(selected.event)}</h2><span class="ev">{selected.event}</span></div>
         <div class="card-b">
           <dl class="meta">
-            <dt>시각</dt><dd class="mono">{fullTime(selected.at)}</dd>
-            <dt>대상</dt><dd>{selected.jobName ?? '—'}{selected.jobId ? ` (#${selected.jobId})` : ''}</dd>
-            <dt>요청 IP</dt><dd class="mono">{selected.ip ?? '—'}</dd>
+            <dt>{t('audit.time')}</dt><dd class="mono">{fullTime(selected.at)}</dd>
+            <dt>{t('audit.target')}</dt><dd>{selected.jobName ?? '—'}{selected.jobId ? ` (#${selected.jobId})` : ''}</dd>
+            <dt>{t('audit.ip')}</dt><dd class="mono">{selected.ip ?? '—'}</dd>
             {#if selected.detail?.via}
-              <dt>경로</dt><dd>{selected.detail.via === 'mcp' ? `MCP · ${selected.detail.mcpKey}` : '웹 화면'}</dd>
+              <dt>{t('audit.via')}</dt><dd>{selected.detail.via === 'mcp' ? t('audit.viaMcp', { key: String(selected.detail.mcpKey) }) : t('audit.viaWeb')}</dd>
             {/if}
-            <dt>요약</dt><dd>{auditSummary(selected) || '—'}</dd>
+            <dt>{t('audit.summary')}</dt><dd>{auditSummary(selected) || '—'}</dd>
           </dl>
           {#if changes}
-            <div class="out-h"><span>변경 내용</span><span class="hint">헤더·환경 변수 값은 *** 로 가림</span></div>
+            <div class="out-h"><span>{t('audit.changes')}</span><span class="hint">{t('audit.maskHint')}</span></div>
             <div class="tbl-box">
               <table class="diff">
-                <thead><tr><th>필드</th><th>변경 전</th><th>변경 후</th></tr></thead>
+                <thead><tr><th>{t('audit.field')}</th><th>{t('audit.before')}</th><th>{t('audit.after')}</th></tr></thead>
                 <tbody>
                   {#each changes as c (c.field)}
                     <tr><td class="mono">{c.field}</td><td class="mono old">{c.before ?? '—'}</td><td class="mono new">{c.after ?? '—'}</td></tr>
@@ -104,7 +105,7 @@
               </table>
             </div>
           {:else if snapshot}
-            <div class="out-h"><span>작업 내용</span><span class="hint">헤더·환경 변수 값은 *** 로 가림</span></div>
+            <div class="out-h"><span>{t('audit.snapshot')}</span><span class="hint">{t('audit.maskHint')}</span></div>
             <div class="tbl-box">
               <table class="diff">
                 <tbody>
@@ -117,7 +118,7 @@
           {/if}
         </div>
       {:else}
-        <div class="card-b" style="color:var(--muted)">목록에서 항목을 선택하면 상세 내용이 나타납니다.</div>
+        <div class="card-b" style="color:var(--muted)">{t('audit.selectHint')}</div>
       {/if}
     </aside>
   </div>

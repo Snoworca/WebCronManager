@@ -3,7 +3,8 @@
   import Badge from '../components/Badge.svelte';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api.ts';
-  import { resultLabel, runDuration, shortTime } from '../lib/format.ts';
+  import { resultLabel, runDuration, shortTime, typeLabel } from '../lib/format.ts';
+  import { t } from '../lib/i18n.svelte.ts';
   import { notify } from '../lib/state.svelte.ts';
   import type { Job, RunStatus, Stats } from '../lib/types.ts';
 
@@ -31,8 +32,8 @@
 
   onMount(() => {
     load();
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
   });
 
   const lastStatus = (j: Job): RunStatus | 'none' => (j.runningCount > 0 ? 'running' : (j.lastRun?.status ?? 'none'));
@@ -70,54 +71,59 @@
 <main class="wrap">
   <div class="head">
     <div>
-      <h1>작업</h1>
-      <p>등록된 작업 {jobs.length}개 · 활성 {jobs.filter((j) => j.enabled).length}개</p>
+      <h1>{t('jobs.title')}</h1>
+      <p>{t('jobs.summary', { total: jobs.length, enabled: jobs.filter((j) => j.enabled).length })}</p>
     </div>
-    <a class="btn btn-primary btn-lg" href="#/jobs/new"><Icon name="plus" size={18} />새 작업</a>
+    <a class="btn btn-primary btn-lg" href="#/jobs/new"><Icon name="plus" size={18} />{t('jobs.new')}</a>
   </div>
 
   {#if ran}
     <div class="notice" role="status">
-      <span>‘{ran.name}’ 작업을 지금 실행했습니다. 결과는 실행 이력에서 확인하세요.</span>
-      <a href="#/runs?run={ran.runId}" style="font-weight:600">실행 결과 보기</a>
+      <span>{t('jobs.ranNotice', { name: ran.name })}</span>
+      <a href="#/runs?run={ran.runId}" style="font-weight:600">{t('jobs.viewResult')}</a>
     </div>
   {/if}
   {#if error}<div class="alert alert-bad" role="alert">{error}</div>{/if}
 
-  <section class="stats" aria-label="최근 24시간 요약">
-    <div class="card stat"><span>최근 24시간 성공</span><b style="color:var(--ok)">{stats?.success24h ?? '—'}</b></div>
-    <div class="card stat"><span>최근 24시간 실패</span><b style="color:var(--bad)">{stats?.failure24h ?? '—'}</b></div>
-    <div class="card stat"><span>지금 실행 중</span><b style="color:var(--accent)">{stats?.running ?? '—'}</b></div>
-    <div class="card stat"><span>활성 작업</span><b>{stats?.enabledJobs ?? '—'} <small style="font-size:16px;font-weight:500;color:var(--muted)">/ {stats?.totalJobs ?? '—'}</small></b></div>
+  <section class="stats" aria-label={t('jobs.statsAria')}>
+    <div class="card stat"><span>{t('jobs.statSuccess')}</span><b style="color:var(--ok)">{stats?.success24h ?? '—'}</b></div>
+    <div class="card stat"><span>{t('jobs.statFailure')}</span><b style="color:var(--bad)">{stats?.failure24h ?? '—'}</b></div>
+    <div class="card stat"><span>{t('jobs.statRunning')}</span><b style="color:var(--accent)">{stats?.running ?? '—'}</b></div>
+    <div class="card stat"><span>{t('jobs.statEnabled')}</span><b>{stats?.enabledJobs ?? '—'} <small style="font-size:16px;font-weight:500;color:var(--muted)">/ {stats?.totalJobs ?? '—'}</small></b></div>
   </section>
 
-  <section class="card" aria-label="작업 목록">
+  <section class="card" aria-label={t('jobs.listAria')}>
     <div class="filters">
-      <label class="field" style="flex:1 1 260px">작업 검색<input class="input" type="search" placeholder="이름 또는 설명" bind:value={q} /></label>
-      <label class="field" style="flex:0 1 160px">유형
-        <select class="input" bind:value={type}><option value="">전체</option><option value="cli">CLI</option><option value="webhook">웹훅</option></select>
+      <label class="field" style="flex:1 1 260px">{t('jobs.search')}<input class="input" type="search" placeholder={t('jobs.searchPlaceholder')} bind:value={q} /></label>
+      <label class="field" style="flex:0 1 160px">{t('jobs.type')}
+        <select class="input" bind:value={type}>
+          <option value="">{t('common.all')}</option><option value="cli">{typeLabel('cli')}</option><option value="webhook">{typeLabel('webhook')}</option>
+        </select>
       </label>
-      <label class="field" style="flex:0 1 170px">마지막 결과
+      <label class="field" style="flex:0 1 170px">{t('jobs.lastResult')}
         <select class="input" bind:value={result}>
-          <option value="">전체</option><option value="success">성공</option><option value="failure">실패</option>
-          <option value="timeout">시간 초과</option><option value="running">실행 중</option><option value="none">기록 없음</option>
+          <option value="">{t('common.all')}</option><option value="success">{t('status.success')}</option><option value="failure">{t('status.failure')}</option>
+          <option value="timeout">{t('status.timeout')}</option><option value="running">{t('status.running')}</option><option value="none">{t('status.none')}</option>
         </select>
       </label>
     </div>
     <div class="tbl-box">
       <table style="min-width:1000px">
-        <thead><tr><th style="width:72px">활성</th><th>작업</th><th>유형</th><th>일정</th><th>다음 실행</th><th>마지막 결과</th><th style="text-align:right">동작</th></tr></thead>
+        <thead><tr>
+          <th style="width:72px">{t('jobs.colEnabled')}</th><th>{t('jobs.colJob')}</th><th>{t('jobs.colType')}</th><th>{t('jobs.colSchedule')}</th>
+          <th>{t('jobs.colNext')}</th><th>{t('jobs.colLast')}</th><th style="text-align:right">{t('jobs.colActions')}</th>
+        </tr></thead>
         <tbody>
           {#each shown as j (j.id)}
             <tr class:off={!j.enabled}>
-              <td><button type="button" class="sw" role="switch" aria-checked={j.enabled} aria-label="{j.name} 활성 전환" onclick={() => toggle(j)}></button></td>
+              <td><button type="button" class="sw" role="switch" aria-checked={j.enabled} aria-label={t('jobs.toggleAria', { name: j.name })} onclick={() => toggle(j)}></button></td>
               <td><a class="t-main" href="#/jobs/{j.id}">{j.name}</a><span class="t-sub mono" style="font-size:12px">{target(j)}</span></td>
-              <td><span class="type"><Icon name={j.type} />{j.type === 'cli' ? 'CLI' : '웹훅'}</span></td>
+              <td><span class="type"><Icon name={j.type} />{typeLabel(j.type)}</span></td>
               <td><span class="mono" style="font-size:13px">{j.cron}</span></td>
-              <td class="mono" style="font-size:13px;white-space:nowrap">{j.enabled ? shortTime(j.nextRunAt) : '— 비활성'}</td>
+              <td class="mono" style="font-size:13px;white-space:nowrap">{j.enabled ? shortTime(j.nextRunAt) : t('jobs.disabled')}</td>
               <td>
                 {#if j.runningCount > 0}
-                  <Badge status="running" label="실행 중 · {j.runningCount}건" />
+                  <Badge status="running" label={t('jobs.runningCount', { n: j.runningCount })} />
                 {:else if j.lastRun}
                   <Badge status={j.lastRun.status} label={resultLabel(j.lastRun)} />
                   <span class="t-sub" style="font-size:12px;margin-top:4px;white-space:nowrap">{shortTime(j.lastRun.startedAt)} · {runDuration(j.lastRun)}</span>
@@ -126,13 +132,13 @@
                 {/if}
               </td>
               <td style="text-align:right;white-space:nowrap">
-                <button type="button" class="btn" onclick={() => runNow(j)}><Icon name="play" size={14} />지금 실행</button>
-                <a class="btn" href="#/jobs/{j.id}" style="margin-left:6px">편집</a>
+                <button type="button" class="btn" onclick={() => runNow(j)}><Icon name="play" size={14} />{t('common.runNow')}</button>
+                <a class="btn" href="#/jobs/{j.id}" style="margin-left:6px">{t('common.edit')}</a>
               </td>
             </tr>
           {:else}
             <tr><td colspan="7" class="empty">
-              {#if !loaded}불러오는 중…{:else if jobs.length === 0}등록된 작업이 없습니다. <a href="#/jobs/new">새 작업</a>을 만들어 보세요.{:else}조건에 맞는 작업이 없습니다.{/if}
+              {#if !loaded}{t('common.loading')}{:else if jobs.length === 0}{t('jobs.empty')} <a href="#/jobs/new">{t('jobs.new')}</a>{:else}{t('jobs.noMatch')}{/if}
             </td></tr>
           {/each}
         </tbody>

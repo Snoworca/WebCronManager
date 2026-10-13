@@ -260,3 +260,24 @@ test('OBS-WEBCRON-001 AC-3, OBS-WEBCRON-002: 감사 로그는 조회·필터만 
   const future = (await api(c, 'GET', `/api/audit?from=${Date.now() + 60_000}`)).json();
   assert.equal(future.total, 0);
 }));
+
+test('IR-WEBCRON-003 AC-1: API 오류·검증 메시지는 Accept-Language 를 따르고 기본은 영어다', setup(async (c) => {
+  const wrong = (lang?: string) => c.app.inject({
+    method: 'POST', url: '/api/login', payload: { password: 'nope' }, remoteAddress: '10.7.7.7',
+    headers: lang ? { 'accept-language': lang } : {},
+  });
+  assert.equal((await wrong('ko-KR,ko;q=0.9')).json().message, '비밀번호가 올바르지 않습니다.');
+  assert.equal((await wrong('en-US,en;q=0.9')).json().message, 'Incorrect password.');
+  assert.equal((await wrong()).json().message, 'Incorrect password.');
+
+  const bad = (lang: string) => c.app.inject({
+    method: 'POST', url: '/api/jobs', payload: cliJob({ name: '', cron: '* *' }),
+    headers: { cookie: c.cookie, 'accept-language': lang }, remoteAddress: '10.0.0.1',
+  });
+  const ko = (await bad('ko')).json();
+  const en = (await bad('en')).json();
+  assert.equal(ko.errors.name, '이름을 입력하세요.');
+  assert.equal(en.errors.name, 'Enter a name.');
+  assert.match(en.errors.cron, /5 fields/);
+  assert.equal(en.message, 'Check the input values.');
+}));

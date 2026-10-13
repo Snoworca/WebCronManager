@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,8 +17,9 @@ function freePort(): Promise<number> {
   });
 }
 
-function launch(envPath: string) {
-  const child = spawn(process.execPath, [MAIN, '--env', envPath], { stdio: ['ignore', 'pipe', 'pipe'] });
+function launch(envPath: string, lang = 'ko_KR.UTF-8') {
+  const env = { ...process.env, LANG: lang, LC_ALL: '', LC_MESSAGES: '' };
+  const child = spawn(process.execPath, [MAIN, '--env', envPath], { stdio: ['ignore', 'pipe', 'pipe'], env });
   let out = '';
   child.stdout.on('data', (c) => (out += c));
   child.stderr.on('data', (c) => (out += c));
@@ -42,6 +43,19 @@ test('OPS-WEBCRON-001 AC-1: 설정 파일이 없으면 템플릿을 만들고 �
     assert.ok(existsSync(envPath));
     assert.match(p.output(), /템플릿/);
   } finally { t.cleanup(); }
+});
+
+test('OPS-WEBCRON-003 AC-1, AC-2: 서버 로캘에 따라 콘솔 메시지와 템플릿 주석 언어가 바뀐다', async () => {
+  for (const [lang, word, hangul] of [['ko_KR.UTF-8', /템플릿/, true], ['en_US.UTF-8', /template/, false]] as const) {
+    const t = tempDir();
+    try {
+      const envPath = join(t.dir, '.env');
+      const p = launch(envPath, lang);
+      assert.equal(await p.exited, 1);
+      assert.match(p.output(), word);
+      assert.equal(/[가-힣]/.test(readFileSync(envPath, 'utf8')), hangul);
+    } finally { t.cleanup(); }
+  }
 });
 
 test('OPS-WEBCRON-002, REL-WEBCRON-001 AC-1, SEC-WEBCRON-002 AC-5: 시작·종료를 기록하고 재기동 후 일정을 복원한다', { skip: process.platform === 'win32' && 'SIGTERM 미지원' }, async () => {

@@ -1,3 +1,4 @@
+import { i18n, t } from './i18n.svelte.ts';
 import { go, session } from './state.svelte.ts';
 
 export class ApiError extends Error {
@@ -13,23 +14,25 @@ export class ApiError extends Error {
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export async function api<T>(method: Method, url: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, credentials: 'same-origin' };
+  // IR-WEBCRON-003 AC-2: 선택한 화면 언어로 서버 메시지를 받는다.
+  const headers: Record<string, string> = { 'accept-language': i18n.locale };
+  const init: RequestInit = { method, credentials: 'same-origin', headers };
   if (method !== 'GET') {
-    init.headers = { 'content-type': 'application/json' };
+    headers['content-type'] = 'application/json';
     init.body = JSON.stringify(body ?? {});
   }
   let res: Response;
   try {
     res = await fetch(url, init);
   } catch {
-    throw new ApiError(0, '서버에 연결할 수 없습니다.');
+    throw new ApiError(0, t('common.offline'));
   }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && url !== '/api/login') {
     session.me = null;
     go('/login');
   }
-  if (!res.ok) throw new ApiError(res.status, data.message ?? `요청 실패 (HTTP ${res.status})`, data.errors);
+  if (!res.ok) throw new ApiError(res.status, data.message ?? t('common.requestFailed', { status: res.status }), data.errors);
   return data as T;
 }
 

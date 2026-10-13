@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.ts';
 import { loadConfig, type Config } from './config.ts';
 import { Store } from './db.ts';
+import { ts } from './i18n.ts';
 import { Runner } from './runner.ts';
 import { Scheduler } from './scheduler.ts';
 import { VERSION } from './version.ts';
@@ -25,7 +26,7 @@ export async function startServer(opts: { envPath: string; webDir?: string; log?
 
   if (passwordEncrypted) {
     store.insertAudit({ event: 'config.password_encrypted', ip: null, jobId: null, jobName: null, detail: { envPath: config.envPath } });
-    log(`평문 비밀번호를 enc 해시로 바꿔 저장했습니다: ${config.envPath}`);
+    log(ts('log.passwordEncrypted', { path: config.envPath }));
   }
   const interrupted = store.markInterrupted();
 
@@ -36,14 +37,14 @@ export async function startServer(opts: { envPath: string; webDir?: string; log?
   });
   const jobs = store.listJobs();
   for (const job of jobs) {
-    try { scheduler.sync(job); } catch (e) { log(`작업 ${job.id}(${job.name}) 일정을 등록하지 못했습니다: ${(e as Error).message}`); }
+    try { scheduler.sync(job); } catch (e) { log(ts('log.scheduleFailed', { id: job.id, name: job.name, error: (e as Error).message })); }
   }
 
   const purge = () => {
     try {
       const r = store.purge(Date.now() - config.logRetentionDays * DAY);
-      if (r.runs || r.audit) log(`보관 기간(${config.logRetentionDays}일)이 지난 기록을 정리했습니다: 실행 ${r.runs}건, 감사 ${r.audit}건`);
-    } catch (e) { log(`기록 정리 실패: ${(e as Error).message}`); }
+      if (r.runs || r.audit) log(ts('log.purged', { days: config.logRetentionDays, runs: r.runs, audit: r.audit }));
+    } catch (e) { log(ts('log.purgeFailed', { error: (e as Error).message })); }
   };
   purge();
   const purgeTimer = setInterval(purge, DAY);
@@ -59,8 +60,8 @@ export async function startServer(opts: { envPath: string; webDir?: string; log?
     event: 'server.start', ip: null, jobId: null, jobName: null,
     detail: { version: VERSION, jobs: jobs.length, interruptedRuns: interrupted, timezone: config.timezone },
   });
-  log(`v${VERSION} 시작: ${url} (작업 ${jobs.length}개, 타임존 ${config.timezone})`);
-  if (interrupted) log(`이전 종료 때 실행 중이던 ${interrupted}건을 interrupted 로 마감했습니다.`);
+  log(ts('log.started', { version: VERSION, url, jobs: jobs.length, tz: config.timezone }));
+  if (interrupted) log(ts('log.interrupted', { count: interrupted }));
 
   let stopping: Promise<void> | null = null;
   const stop = (reason: string) => {
@@ -71,7 +72,7 @@ export async function startServer(opts: { envPath: string; webDir?: string; log?
       store.insertAudit({ event: 'server.stop', ip: null, jobId: null, jobName: null, detail: { reason } });
       await app.close();
       store.close();
-      log(`종료했습니다 (${reason}).`);
+      log(ts('log.stopped', { reason }));
     })();
     return stopping;
   };

@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from './components/Icon.svelte';
+  import LangSwitch from './components/LangSwitch.svelte';
   import { api } from './lib/api.ts';
+  import { t } from './lib/i18n.svelte.ts';
   import { go, notify, route, session, toast } from './lib/state.svelte.ts';
   import type { Me } from './lib/types.ts';
   import Audit from './pages/Audit.svelte';
@@ -37,22 +39,23 @@
 </script>
 
 {#if !session.checked}
-  <div class="loading">불러오는 중…</div>
+  <div class="loading">{t('common.loading')}</div>
 {:else if !session.me || route.path === '/login'}
   <Login />
 {:else}
   <header class="top">
     <div class="wrap">
       <a class="brand" href="#/jobs"><Icon name="clock" size={26} stroke="#2B47C9" />WebCron</a>
-      <nav class="nav" aria-label="주 메뉴">
-        <a href="#/jobs" aria-current={section === 'jobs' ? 'page' : undefined}>작업</a>
-        <a href="#/runs" aria-current={section === 'runs' ? 'page' : undefined}>실행 이력</a>
-        <a href="#/audit" aria-current={section === 'audit' ? 'page' : undefined}>감사 로그</a>
-        <a href="#/mcp" aria-current={section === 'mcp' ? 'page' : undefined}>MCP</a>
+      <nav class="nav" aria-label={t('nav.aria')}>
+        <a href="#/jobs" aria-current={section === 'jobs' ? 'page' : undefined}>{t('nav.jobs')}</a>
+        <a href="#/runs" aria-current={section === 'runs' ? 'page' : undefined}>{t('nav.runs')}</a>
+        <a href="#/audit" aria-current={section === 'audit' ? 'page' : undefined}>{t('nav.audit')}</a>
+        <a href="#/mcp" aria-current={section === 'mcp' ? 'page' : undefined}>{t('nav.mcp')}</a>
       </nav>
       <div class="who">
-        <span class="chip" title="설정 파일 WEBCRON_TIMEZONE">TZ {session.me.timezone}</span>
-        <button class="btn" type="button" onclick={logout}>로그아웃</button>
+        <LangSwitch />
+        <span class="chip" title={t('nav.tzTitle')}>TZ {session.me.timezone}</span>
+        <button class="btn" type="button" onclick={logout}>{t('nav.logout')}</button>
       </div>
     </div>
   </header>

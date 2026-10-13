@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../lib/i18n.svelte.ts';
   import type { Pair } from '../lib/types.ts';
 
   let { rows = $bindable(), keyLabel, valueLabel, addLabel, secret = false }:
@@ -10,7 +11,7 @@
     <div class="kv">
       <input class="input mono k" aria-label={keyLabel} placeholder={keyLabel} bind:value={row.key} />
       <input class="input mono" aria-label={valueLabel} placeholder={valueLabel} type={secret ? 'password' : 'text'} autocomplete="off" bind:value={row.value} />
-      <button type="button" class="btn icon-btn" aria-label="{keyLabel} 삭제" onclick={() => rows.splice(i, 1)}>×</button>
+      <button type="button" class="btn icon-btn" aria-label={t('common.delete', { label: keyLabel })} onclick={() => rows.splice(i, 1)}>×</button>
     </div>
   {/each}
 </div>

@@ -4,6 +4,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { runCli, OUTPUT_LIMIT } from '../src/exec/cli.ts';
 import { nodeCmd, sleep, tempDir, waitFor } from './helpers.ts';
+import { setServerLocale } from '../src/i18n.ts';
+
+setServerLocale('ko'); // 한국어 메시지를 검사한다
 
 const never = () => new AbortController().signal;
 const isAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };

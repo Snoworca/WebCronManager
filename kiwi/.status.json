@@ -1,22 +1,22 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-10-12T17:51:36.779Z",
+  "generatedAt": "2026-10-13T00:59:52.883Z",
   "source": "speckiwi",
   "specFingerprint": {
     "algorithm": "sha256",
-    "value": "1138a2755be98a73323695485e58b099fa2992bf6707391d80428028879ff2dc",
+    "value": "02249ea2e322f0ef3743662f49f9daa79fa616a73f51654cbd75eb5e85c5d917",
     "files": [
       {
         "path": "docs/spec/00.index.md",
-        "sha256": "b2e75eed7cac03db0024eb3eda7695af19620ced520e6758e1217cf9712ea1a6",
+        "sha256": "f18fbc29d69b3a980b3d0ba331b110ee43e466abb44f78f28499ece8e87bad58",
         "size": 2070,
-        "mtimeMs": 1791825952798.632
+        "mtimeMs": 1791853191574.1438
       },
       {
         "path": "docs/spec/01.webcron.srs.md",
-        "sha256": "1269d8de0825ea1039b852dbe78cb9bc3ba39f6d85c3e2d340a511a597eee7a5",
-        "size": 51945,
-        "mtimeMs": 1791827496022.5334
+        "sha256": "ee7fe5c818c39b76031fc4214ed522011aec97b3fd91bbba1feffad806da7f12",
+        "size": 57481,
+        "mtimeMs": 1791853191479.0078
       },
       {
         "path": "docs/spec/90.appendix.md",
@@ -31,13 +31,13 @@
       "WEBCRON": 1
     },
     "operational": {
-      "WEBCRON": 2
+      "WEBCRON": 3
     },
     "security": {
       "WEBCRON": 5
     },
     "functional": {
-      "WEBCRON": 11
+      "WEBCRON": 12
     },
     "observability": {
       "WEBCRON": 2
@@ -49,7 +49,7 @@
       "WEBCRON": 2
     },
     "interface": {
-      "WEBCRON": 2
+      "WEBCRON": 3
     }
   },
   "lock": {

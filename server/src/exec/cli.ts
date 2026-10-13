@@ -1,6 +1,7 @@
 // FR-WEBCRON-004: CLI 작업 실행, FR-WEBCRON-006: 타임아웃, FR-WEBCRON-009: 중지
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
+import { ts } from '../i18n.ts';
 import { Capped, type CliSpec, type ExecOptions, type ExecResult } from './types.ts';
 
 export { OUTPUT_LIMIT } from './types.ts';
@@ -22,7 +23,7 @@ export type CliResult = ExecResult & { stdout: string; stderr: string };
 
 export function runCli(spec: CliSpec, opts: ExecOptions): Promise<CliResult> {
   if (spec.cwd && !(existsSync(spec.cwd) && statSync(spec.cwd).isDirectory())) {
-    return Promise.resolve({ status: 'failure', exitCode: null, stdout: '', stderr: '', error: `작업 디렉터리가 없습니다: ${spec.cwd}` });
+    return Promise.resolve({ status: 'failure', exitCode: null, stdout: '', stderr: '', error: ts('exec.cwdMissing', { cwd: spec.cwd }) });
   }
   if (opts.signal.aborted) return Promise.resolve({ status: 'canceled', exitCode: null, stdout: '', stderr: '' });
 
@@ -57,9 +58,9 @@ export function runCli(spec: CliSpec, opts: ExecOptions): Promise<CliResult> {
       if (timer) clearTimeout(timer);
       opts.signal.removeEventListener('abort', onAbort);
       const base = { exitCode: code, stdout: out.text(), stderr: err.text() };
-      if (reason === 'timeout') resolve({ ...base, status: 'timeout', error: `타임아웃(${opts.timeoutSec}초)으로 프로세스를 종료했습니다.` });
-      else if (reason === 'canceled') resolve({ ...base, status: 'canceled', error: '사용자가 실행을 중지했습니다.' });
-      else if (spawnError) resolve({ ...base, status: 'failure', error: `명령을 시작할 수 없습니다: ${spawnError}` });
+      if (reason === 'timeout') resolve({ ...base, status: 'timeout', error: ts('exec.timeoutCli', { sec: opts.timeoutSec }) });
+      else if (reason === 'canceled') resolve({ ...base, status: 'canceled', error: ts('exec.canceled') });
+      else if (spawnError) resolve({ ...base, status: 'failure', error: ts('exec.spawnFailed', { error: spawnError }) });
       else resolve({ ...base, status: code === 0 ? 'success' : 'failure' });
     });
   });

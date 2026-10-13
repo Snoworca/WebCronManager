@@ -5,6 +5,9 @@ import type { AddressInfo } from 'node:net';
 import { runWebhook } from '../src/exec/webhook.ts';
 import { OUTPUT_LIMIT } from '../src/exec/cli.ts';
 import { sleep } from './helpers.ts';
+import { setServerLocale } from '../src/i18n.ts';
+
+setServerLocale('ko'); // 한국어 메시지를 검사한다
 
 interface Seen { method: string; url: string; headers: IncomingMessage['headers']; body: string }
 const seen: Seen[] = [];

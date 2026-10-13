@@ -1,5 +1,6 @@
 // FR-WEBCRON-005: 웹훅 실행, FR-WEBCRON-006: 타임아웃, FR-WEBCRON-009: 중지
 import { Capped, type ExecOptions, type ExecResult, type WebhookSpec } from './types.ts';
+import { ts } from '../i18n.ts';
 
 export const MAX_REDIRECTS = 10;
 const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
@@ -40,13 +41,13 @@ async function attempt(spec: WebhookSpec, signal: AbortSignal): Promise<Attempt>
     } catch (e) {
       if (signal.aborted) throw new StopError();
       const cause = (e as { cause?: { code?: string; message?: string } }).cause;
-      return { ok: false, httpStatus: null, finalUrl: url, redirects, body: '', error: `요청 실패: ${cause?.code ?? cause?.message ?? (e as Error).message}` };
+      return { ok: false, httpStatus: null, finalUrl: url, redirects, body: '', error: ts('exec.requestFailed', { error: cause?.code ?? cause?.message ?? (e as Error).message }) };
     }
     const location = res.headers.get('location');
     if (REDIRECT_CODES.has(res.status) && location) {
       await res.body?.cancel();
       if (redirects >= MAX_REDIRECTS) {
-        return { ok: false, httpStatus: res.status, finalUrl: url, redirects, body: '', error: `리다이렉트가 ${MAX_REDIRECTS}회를 넘었습니다.` };
+        return { ok: false, httpStatus: res.status, finalUrl: url, redirects, body: '', error: ts('exec.tooManyRedirects', { max: MAX_REDIRECTS }) };
       }
       redirects++;
       url = new URL(location, url).toString();
@@ -61,7 +62,7 @@ async function attempt(spec: WebhookSpec, signal: AbortSignal): Promise<Attempt>
     try { text = await readCapped(res); } catch (e) {
       if (signal.aborted) throw new StopError();
       text = '';
-      return { ok: false, httpStatus: res.status, finalUrl: url, redirects, body: text, error: `응답 읽기 실패: ${(e as Error).message}` };
+      return { ok: false, httpStatus: res.status, finalUrl: url, redirects, body: text, error: ts('exec.readFailed', { error: (e as Error).message }) };
     }
     const ok = res.status >= 200 && res.status < 300;
     return { ok, httpStatus: res.status, finalUrl: url, redirects, body: text, error: ok ? null : `HTTP ${res.status}` };
@@ -103,7 +104,7 @@ export async function runWebhook(spec: WebhookSpec, opts: ExecOptions & { retryD
       status: timedOut ? 'timeout' : 'canceled',
       httpStatus: last?.httpStatus ?? null, finalUrl: last?.finalUrl ?? spec.url, redirects: last?.redirects ?? 0,
       responseBody: last?.body ?? '', attempts,
-      error: timedOut ? `타임아웃(${opts.timeoutSec}초)으로 요청을 취소했습니다.` : '사용자가 실행을 중지했습니다.',
+      error: timedOut ? ts('exec.timeoutHook', { sec: opts.timeoutSec }) : ts('exec.canceled'),
     };
   } finally {
     if (timer) clearTimeout(timer);
